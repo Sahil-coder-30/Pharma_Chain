@@ -231,9 +231,9 @@ export default function InventoryScreen() {
         {/* Header Bar */}
         <View style={styles.headerBar}>
           <View style={{ flex: 1, marginRight: 12 }}>
-            <Text style={styles.headerTitle}>Stock Vault</Text>
+            <Text style={styles.headerTitle}>Inventory & Stock</Text>
             <Text style={styles.headerSubtitle}>
-              {inventoryList.length} authenticated batches in repository
+              {inventoryList.length} authenticated batches in stock
             </Text>
           </View>
           <TouchableOpacity

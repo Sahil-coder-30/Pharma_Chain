@@ -8,8 +8,8 @@ import {
   CheckCircle2,
   Clock,
   Radio,
-  ArrowRight,
   Database,
+  Boxes,
 } from 'lucide-react';
 
 export const DashboardActivity: React.FC = () => {
@@ -32,63 +32,63 @@ export const DashboardActivity: React.FC = () => {
   const liveLedgerTxs = useMemo(() => {
     if (batches.length === 0) return [];
     return batches.slice(0, 3).map((b) => ({
-      hash: b.txHash || `0x${b.id.replace(/[^a-f0-9]/gi, '')}9491a82f`,
-      blockNumber: b.blockNumber || 18430,
+      hash: b.txHash || `${b.id}:MINTED`,
+      blockNumber: b.blockNumber || undefined,
       batchId: b.id,
-      status: b.mintStatus,
+      status: b.blockchainStatus === 'FAILED' ? 'FAILED' : b.mintStatus,
     }));
   }, [batches]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {/* 1. B2B Orders & Logistics Preview */}
+      {/* 1. Production Batches Preview */}
       <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-5 shadow-subtle flex flex-col justify-between space-y-4">
         <div>
           <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-blue-950/40 text-blue-400 border border-blue-800/50">
-                <Truck className="w-4 h-4" />
+              <div className="p-2 rounded-xl bg-emerald-950/40 text-emerald-400 border border-emerald-800/50">
+                <Boxes className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-[var(--text-primary)]">Pharmacy Orders & Logistics</h3>
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">Production Batches</h3>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--bg-element)] text-[var(--text-muted)]">
-              {orders.length} Active POs
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--bg-element)] text-[var(--text-muted)] font-mono">
+              {batches.length} Batches
             </span>
           </div>
 
           <div className="mt-3 space-y-2">
-            {orders.length > 0 ? (
-              orders.slice(0, 3).map((ord) => (
+            {batches.length > 0 ? (
+              batches.slice(0, 3).map((b) => (
                 <div
-                  key={ord.id}
-                  onClick={() => navigateTo('orders')}
-                  className="p-2.5 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] hover:border-[var(--border-strong)] transition-all cursor-pointer space-y-1 text-xs"
+                  key={b.id}
+                  onClick={() => navigateTo('batches')}
+                  className="p-2.5 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] hover:border-emerald-500/40 transition-all cursor-pointer space-y-1 text-xs"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-[var(--brand-primary)] text-[11px]">
-                      {ord.orderNumber}
+                    <span className="font-mono font-bold text-emerald-400 text-[11px] truncate max-w-[170px]">
+                      {b.id}
                     </span>
-                    <StatusBadge status={ord.status} size="sm" />
+                    <StatusBadge status={b.mintStatus} size="sm" />
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-semibold text-[var(--text-primary)]">{ord.pharmacyName}</span>
-                    <span className="font-bold text-[var(--text-primary)]">₹{ord.totalAmount.toLocaleString()}</span>
+                    <span className="font-semibold text-[var(--text-primary)] truncate max-w-[160px]">{b.medicineName}</span>
+                    <span className="font-bold text-[var(--text-primary)] font-mono">{b.totalQuantity.toLocaleString()} packs</span>
                   </div>
                 </div>
               ))
             ) : (
               <div className="py-6 text-center text-xs text-[var(--text-muted)]">
-                No active dispatch orders found.
+                No active production batches found.
               </div>
             )}
           </div>
         </div>
 
         <button
-          onClick={() => navigateTo('orders')}
+          onClick={() => navigateTo('batches')}
           className="btn-secondary w-full text-xs justify-center"
         >
-          Open Orders & Shipping Center
+          Open Batches & Production
         </button>
       </div>
 
@@ -144,7 +144,7 @@ export const DashboardActivity: React.FC = () => {
               <h3 className="text-sm font-bold text-[var(--text-primary)]">Fabric Ledger Stream</h3>
             </div>
             <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-              {batches.length > 0 ? `#${18430 + batches.length}` : '#18430'}
+              {batches.length > 0 ? `${batches.filter(b => b.blockchainStatus !== 'FAILED').length} Committed` : 'Idle'}
             </span>
           </div>
 
@@ -160,7 +160,9 @@ export const DashboardActivity: React.FC = () => {
                     <span className="font-bold text-[var(--brand-primary)]">
                       :{tx.batchId}
                     </span>
-                    <span className="text-[10px] text-[var(--text-muted)]">Block #{tx.blockNumber}</span>
+                    <span className={`text-[10px] ${tx.status === 'FAILED' ? 'text-rose-400 font-bold' : 'text-[var(--text-muted)]'}`}>
+                      {tx.status === 'FAILED' ? '⚠️ Sync Failed' : tx.blockNumber ? `Block #${tx.blockNumber}` : 'Fabric Commit'}
+                    </span>
                   </div>
                   <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">{tx.hash}</p>
                 </div>

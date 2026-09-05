@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboard } from '../../features/dashboard/Hooks/dashboard.hooks';
 import { Database, Link2, ArrowUpRight, Cpu, Radio, ShieldCheck } from 'lucide-react';
 
 export const BlockchainLedgerPreview: React.FC = () => {
@@ -37,7 +37,7 @@ export const BlockchainLedgerPreview: React.FC = () => {
             Latest Block
           </span>
           <span className="text-lg font-bold font-mono text-brand-300 mt-1 block">
-            {batches.length > 0 ? `#${18430 + batches.length}` : '#18430'}
+            {batches[0]?.blockNumber ? `#${batches[0].blockNumber}` : (batches.length > 0 ? 'Committed' : 'Idle')}
           </span>
           <span className="text-[10px] text-emerald-400 font-mono mt-0.5 block">
             Raft Consensus OK
@@ -46,10 +46,14 @@ export const BlockchainLedgerPreview: React.FC = () => {
 
         <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/80">
           <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">
-            Latest Tx Hash
+            Latest Genesis Key
           </span>
           <span className="text-xs font-bold font-mono text-slate-200 mt-1.5 block truncate">
-            {batches[0]?.txHash ? `${batches[0].txHash.substring(0, 10)}...${batches[0].txHash.substring(batches[0].txHash.length - 6)}` : '0x000000...000000'}
+            {batches[0]?.txHash
+              ? `${batches[0].txHash.substring(0, 14)}...`
+              : batches[0]?.id
+              ? `${batches[0].id.substring(0, 16)}...`
+              : 'None'}
           </span>
           <span className="text-[10px] text-slate-400 mt-0.5 block">
             Verified by Org1Peer

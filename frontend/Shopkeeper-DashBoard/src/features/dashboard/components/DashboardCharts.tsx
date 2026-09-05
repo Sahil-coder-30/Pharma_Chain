@@ -10,27 +10,53 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { Activity, PieChart as PieIcon, ShieldCheck } from 'lucide-react';
+import { Activity, PieChart as PieIcon, PackageSearch } from 'lucide-react';
+import { useDashboard } from '../Hooks/dashboard.hooks';
 
-const HOURLY_SALES = [
-  { time: '09:00', packs: 12, revenue: 1450 },
-  { time: '11:00', packs: 28, revenue: 3890 },
-  { time: '13:00', packs: 45, revenue: 6200 },
-  { time: '15:00', packs: 34, revenue: 4920 },
-  { time: '17:00', packs: 62, revenue: 8900 },
-  { time: '19:00', packs: 85, revenue: 12400 },
-  { time: '21:00', packs: 54, revenue: 7600 },
-];
-
-const CATEGORY_DATA = [
-  { name: 'Gastrointestinal', value: 35, color: '#10B981' },
-  { name: 'Antibiotics', value: 25, color: '#3B82F6' },
-  { name: 'Cardiovascular', value: 20, color: '#F59E0B' },
-  { name: 'Antidiabetic', value: 12, color: '#8B5CF6' },
-  { name: 'Analgesics', value: 8, color: '#EC4899' },
-];
+const PALETTE = ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#14B8A6'];
 
 export const DashboardCharts: React.FC = () => {
+  const { inventory, sales } = useDashboard();
+
+  // Dynamic category distribution computed from live inventory
+  const categoryMap = new Map<string, number>();
+  inventory.forEach((item) => {
+    const cat = item.category || 'General';
+    categoryMap.set(cat, (categoryMap.get(cat) || 0) + (item.packCount || 0));
+  });
+
+  const totalInventoryPacks = inventory.reduce((acc, i) => acc + (i.packCount || 0), 0);
+
+  const categoryData = Array.from(categoryMap.entries()).map(([name, count], idx) => ({
+    name,
+    value: totalInventoryPacks > 0 ? Math.round((count / totalInventoryPacks) * 100) : 0,
+    count,
+    color: PALETTE[idx % PALETTE.length],
+  }));
+
+  // Dynamic dispense velocity computed from live sales
+  const timeBuckets = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00', '21:00'];
+  const hourlyMap = new Map<string, { packs: number; revenue: number }>();
+  timeBuckets.forEach((t) => hourlyMap.set(t, { packs: 0, revenue: 0 }));
+
+  sales.forEach((s) => {
+    const date = s.timestamp ? new Date(s.timestamp) : new Date();
+    const hour = date.getHours();
+    const bucket = timeBuckets.find((b) => parseInt(b.split(':')[0], 10) >= hour) || '21:00';
+    const curr = hourlyMap.get(bucket) || { packs: 0, revenue: 0 };
+    curr.packs += (s.items || []).reduce((sum, it) => sum + (it.quantity || 1), 0);
+    curr.revenue += s.grandTotal || 0;
+    hourlyMap.set(bucket, curr);
+  });
+
+  const hourlySales = timeBuckets.map((time) => ({
+    time,
+    packs: hourlyMap.get(time)?.packs || 0,
+    revenue: hourlyMap.get(time)?.revenue || 0,
+  }));
+
+  const totalTodayRevenue = sales.reduce((acc, s) => acc + (s.grandTotal || 0), 0);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       {/* 1. Counter Dispense Velocity Chart (7 Cols) */}
@@ -45,18 +71,18 @@ export const DashboardCharts: React.FC = () => {
                 Hourly Dispense Velocity & Revenue
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
-                Real-time Point-of-Sale billing telemetry and blockchain state commitments
+                Live Point-of-Sale billing telemetry committed to Hyperledger Fabric
               </p>
             </div>
           </div>
           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            Peak: 19:00 IST
+            Total Today: ₹{totalTodayRevenue.toLocaleString('en-IN')}
           </span>
         </div>
 
         <div className="h-60 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={HOURLY_SALES} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={hourlySales} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
@@ -99,50 +125,64 @@ export const DashboardCharts: React.FC = () => {
               <h3 className="text-sm font-bold text-[var(--text-primary)]">
                 Therapeutic Formulation Mix
               </h3>
-              <p className="text-[11px] text-[var(--text-muted)]">Active shelf inventory by category</p>
+              <p className="text-[11px] text-[var(--text-muted)]">Active shelf inventory by formulation category</p>
             </div>
           </div>
         </div>
 
-        <div className="h-44 w-full flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={CATEGORY_DATA}
-                cx="50%"
-                cy="50%"
-                innerRadius={45}
-                outerRadius={65}
-                paddingAngle={4}
-                dataKey="value"
-              >
-                {CATEGORY_DATA.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'var(--bg-surface)',
-                  borderColor: 'var(--border)',
-                  borderRadius: '12px',
-                  fontSize: '11px',
-                  color: 'var(--text-primary)',
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Legend */}
-        <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[var(--border)]">
-          {CATEGORY_DATA.map((cat, idx) => (
-            <div key={idx} className="flex items-center gap-1.5 min-w-0">
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-              <span className="text-[11px] text-[var(--text-muted)] truncate">{cat.name}</span>
-              <span className="text-[11px] font-bold text-[var(--text-primary)] ml-auto font-mono">{cat.value}%</span>
+        {categoryData.length > 0 ? (
+          <>
+            <div className="h-44 w-full flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={65}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'var(--bg-surface)',
+                      borderColor: 'var(--border)',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      color: 'var(--text-primary)',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          ))}
-        </div>
+
+            {/* Legend */}
+            <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[var(--border)]">
+              {categoryData.map((cat, idx) => (
+                <div key={idx} className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                  <span className="text-[11px] text-[var(--text-muted)] truncate">{cat.name}</span>
+                  <span className="text-[11px] font-bold text-[var(--text-primary)] ml-auto font-mono">{cat.value}%</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="h-52 flex flex-col items-center justify-center text-center p-4">
+            <div className="w-10 h-10 rounded-2xl bg-[var(--bg-element)] flex items-center justify-center text-[var(--text-muted)] mb-2">
+              <PackageSearch className="w-5 h-5" />
+            </div>
+            <p className="text-xs font-semibold text-[var(--text-primary)]">No Active Inventory Stock</p>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+              Receive inbound distributor deliveries to populate formulation distribution.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

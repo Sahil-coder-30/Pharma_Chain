@@ -106,10 +106,10 @@ export const DashboardOperations: React.FC = () => {
         </div>
 
         <button
-          onClick={() => navigateTo('traceability')}
+          onClick={() => navigateTo('ledger')}
           className="btn-secondary w-full text-xs justify-center"
         >
-          Open Traceability Explorer
+          Open Fabric Blockchain Ledger
         </button>
       </div>
 
@@ -240,7 +240,7 @@ export const DashboardOperations: React.FC = () => {
           onClick={() => navigateTo('inventory')}
           className="btn-secondary w-full text-xs justify-center"
         >
-          View Full Inventory Schedule
+          Open Formulations Catalog
         </button>
       </div>
     </div>

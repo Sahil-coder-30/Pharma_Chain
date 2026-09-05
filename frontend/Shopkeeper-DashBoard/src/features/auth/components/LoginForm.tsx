@@ -12,14 +12,11 @@ import {
   BadgeCheck,
   Store,
 } from 'lucide-react';
-import { DEMO_SHOPKEEPERS } from '../services/auth.api';
-
 export const LoginForm: React.FC = () => {
   const {
     login,
     verify2FA,
     setAuthView,
-    switchDemoAccount,
     requires2FA,
     pendingLoginEmail,
     loading,
@@ -27,9 +24,8 @@ export const LoginForm: React.FC = () => {
     clearError,
   } = useAuth();
 
-  // Pre-configured official retail chemist credentials
-  const [email, setEmail] = useState('chemist@medplus.in');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [twoFactorCode, setTwoFactorCode] = useState('');
@@ -71,15 +67,6 @@ export const LoginForm: React.FC = () => {
     } catch (err) {
       // Error handled in hook
     }
-  };
-
-  const handleFillDemo = () => {
-    clearError();
-    const demo = DEMO_SHOPKEEPERS['APPROVED'];
-    setEmail(demo.email);
-    setPassword(demo.pass);
-    setFieldErrors({});
-    switchDemoAccount('APPROVED');
   };
 
   return (
@@ -263,24 +250,6 @@ export const LoginForm: React.FC = () => {
             )}
           </button>
         </form>
-
-        {/* Minimalist 1-Click Fast Pass Chip */}
-        <div className="mt-5 pt-4 border-t border-[var(--border)] flex items-center justify-between gap-2 text-xs bg-[var(--bg-element)] p-2.5 rounded-xl">
-          <div className="flex items-center gap-2 min-w-0">
-            <BadgeCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-            <div className="truncate text-[11px]">
-              <span className="text-[var(--text-muted)]">Demo: </span>
-              <span className="text-[var(--text-primary)] font-semibold truncate">Apollo MedPlus (Licensed)</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleFillDemo}
-            className="px-2 py-0.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-active)] border border-[var(--border)] text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 cursor-pointer shrink-0 transition-colors"
-          >
-            Reset
-          </button>
-        </div>
 
         {/* Register Footnote */}
         <div className="mt-5 text-center">

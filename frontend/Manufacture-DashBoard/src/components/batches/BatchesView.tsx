@@ -60,8 +60,10 @@ export const BatchesView: React.FC = () => {
     if (batch.mintStatus !== 'MINTED' && batch.mintStatus !== 'RECALLED') {
       showToast({
         type: 'warning',
-        title: 'Batch Minting In Progress',
-        message: `Batch ${batch.id} is currently in "${batch.mintStatus}" status. The QR CSV manifest becomes available once cryptographic signing is complete.`,
+        title: batch.mintStatus === 'FAILED' ? 'Batch Minting Failed' : 'Batch Minting In Progress',
+        message: batch.mintStatus === 'FAILED'
+          ? `Batch ${batch.id} failed minting (${batch.mintError || 'AWS S3 error'}). Please click the sparkle icon to retry minting.`
+          : `Batch ${batch.id} is currently in "${batch.mintStatus}" status. The QR CSV manifest becomes available once cryptographic signing and S3 upload are complete.`,
       });
       return;
     }
@@ -161,7 +163,27 @@ export const BatchesView: React.FC = () => {
       key: 'mintStatus',
       header: 'Status',
       align: 'center',
-      render: (batch) => <StatusBadge status={batch.mintStatus} size="sm" />,
+      render: (batch) => (
+        <div className="flex flex-col items-center gap-1">
+          <StatusBadge status={batch.mintStatus} size="sm" />
+          {batch.blockchainStatus === 'FAILED' && (
+            <span
+              className="text-[10px] text-amber-400 max-w-[140px] truncate font-bold cursor-help flex items-center gap-0.5 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20"
+              title={`Blockchain Desync: ${batch.blockchainError || 'Hyperledger Fabric commit failed. Inspect batch to retry.'}`}
+            >
+              ⚠️ Chain Desynced
+            </span>
+          )}
+          {batch.mintError && (
+            <span
+              className="text-[10px] text-rose-500 max-w-[130px] truncate font-medium cursor-help"
+              title={`Minting / S3 Error: ${batch.mintError}`}
+            >
+              {batch.mintError.includes('S3') ? '⚠️ S3 Storage Error' : '⚠️ Mint Error'}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: 'actions',
@@ -173,6 +195,7 @@ export const BatchesView: React.FC = () => {
             onClick={(e) => {
               e.stopPropagation();
               setSelectedBatch(batch);
+              setActiveNav('batch-detail');
             }}
             className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-emerald-500 hover:bg-[var(--bg-element)] transition-colors cursor-pointer"
             title="View Details"
@@ -180,7 +203,7 @@ export const BatchesView: React.FC = () => {
             <Eye className="w-3.5 h-3.5" />
           </button>
 
-          {batch.mintStatus === 'PENDING' && (
+          {(batch.mintStatus === 'PENDING' || batch.mintStatus === 'FAILED') && (
             <button
               onClick={async (e) => {
                 e.stopPropagation();
@@ -189,8 +212,16 @@ export const BatchesView: React.FC = () => {
                   await loadBatches();
                 } catch {}
               }}
-              className="p-1.5 rounded-lg text-amber-400 hover:text-emerald-400 hover:bg-[var(--bg-element)] transition-colors cursor-pointer"
-              title="Mint Batch Now (Generate Cryptographic QRs)"
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                batch.mintStatus === 'FAILED'
+                  ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'
+                  : 'text-amber-400 hover:text-emerald-400 hover:bg-[var(--bg-element)]'
+              }`}
+              title={
+                batch.mintStatus === 'FAILED'
+                  ? `Retry Minting to AWS S3 (Error: ${batch.mintError || 'Unknown'})`
+                  : 'Mint Batch Now (Generate Cryptographic QRs & Upload to S3)'
+              }
             >
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
             </button>
@@ -312,7 +343,10 @@ export const BatchesView: React.FC = () => {
           item.productionSite.toLowerCase().includes(query)
         }
         pageSize={8}
-        onRowClick={(item) => setSelectedBatch(item)}
+        onRowClick={(item) => {
+          setSelectedBatch(item);
+          setActiveNav('batch-detail');
+        }}
       />
     </div>
   );

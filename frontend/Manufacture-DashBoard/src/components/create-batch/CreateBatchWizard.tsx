@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDashboard } from '../../features/dashboard/Hooks/dashboard.hooks';
 import { useAuth } from '../../features/auth/hooks/auth.hooks';
 import { useToast } from '../../context/ToastContext';
 import { Batch } from '../../types';
-import { createBatchAPI, mintBatchAPI, getBatchDetailsAPI } from '../../features/dashboard/service/dashboard.api';
+import { createBatchAPI, mintBatchAPI, getBatchDetailsAPI, formatISTISOString } from '../../features/dashboard/service/dashboard.api';
 import {
   Pill,
   Factory,
@@ -18,6 +18,7 @@ import {
   Sparkles,
   Download,
   AlertCircle,
+  AlertTriangle,
   Clock,
   Zap,
   Layers,
@@ -29,6 +30,12 @@ import {
   Building2,
   Cpu,
 } from 'lucide-react';
+
+const getTodayISTString = (offsetYears = 0): string => {
+  const d = new Date();
+  if (offsetYears) d.setFullYear(d.getFullYear() + offsetYears);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+};
 
 const INITIAL_FORM_DATA = {
   // 1. Medicine Identity & Formulation (Tier 2) - Clean for User Input
@@ -50,8 +57,8 @@ const INITIAL_FORM_DATA = {
   // 2. Storage, Shelf Life & Manufacturing Site (Tier 2) - Smart Metadata Only
   batchId: `BATCH-${new Date().getFullYear()}-${String(Math.floor(1000 + Math.random() * 9000))}`,
   manufacturerBatchNumber: '',
-  manufacturingDate: new Date().toISOString().split('T')[0],
-  expiryDate: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  manufacturingDate: getTodayISTString(),
+  expiryDate: getTodayISTString(2),
   shelfLifeMonths: 24,
   productionSite: '',
   productionAddress: '',
@@ -78,7 +85,7 @@ const INITIAL_FORM_DATA = {
 
   // 5. Quality Assurance, Release & COA (Tier 2)
   qaOfficerId: '',
-  qaApprovalDate: new Date().toISOString().split('T')[0],
+  qaApprovalDate: getTodayISTString(),
   retestDate: '',
   coaReferenceNo: '',
   microbialTestStatus: 'PASS',
@@ -103,6 +110,25 @@ export const CreateBatchWizard: React.FC = () => {
   const [createdBatchResult, setCreatedBatchResult] = useState<Batch | null>(null);
 
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+
+  // Pre-fill from catalog if selected
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('prefill_formulation');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setFormData((prev) => ({ ...prev, ...parsed }));
+        sessionStorage.removeItem('prefill_formulation');
+        showToast({
+          type: 'info',
+          title: 'Formulation Pre-loaded',
+          message: `Loaded formula details for ${parsed.medicineName}.`,
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [showToast]);
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -184,7 +210,7 @@ export const CreateBatchWizard: React.FC = () => {
           ...batchPayload,
           id: formData.batchId,
           mintStatus: 'PENDING',
-          createdAt: new Date().toISOString(),
+          createdAt: formatISTISOString(),
           qrPackageStatus: 'NOT_STARTED',
         } as Batch;
       }
@@ -200,16 +226,14 @@ export const CreateBatchWizard: React.FC = () => {
 
       setMintingPhase('FABRIC_COMMIT');
 
-      // 3. Poll for MINTED status or simulate complete
+      // 3. Poll for MINTED status or preserve backend returned batch
       let finalBatch: Batch = {
         ...createdBatch,
-        mintStatus: 'MINTED',
-        qrPackageStatus: 'READY',
-        txHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-        blockNumber: Math.floor(18430 + Math.random() * 50),
+        mintStatus: createdBatch.mintStatus || 'MINTED',
+        qrPackageStatus: createdBatch.mintStatus === 'MINTED' ? 'READY' : 'GENERATING',
       };
 
-      // Attempt up to 3 live polling attempts
+      // Attempt up to 3 live polling attempts to get final synced status
       for (let i = 0; i < 3; i++) {
         await new Promise((r) => setTimeout(r, 1000));
         try {
@@ -232,12 +256,21 @@ export const CreateBatchWizard: React.FC = () => {
       setMintingPhase('DONE');
       setIsMintingSimulating(false);
 
-      showToast({
-        type: 'success',
-        title: 'Batch Minted & Endorsed to Blockchain',
-        message: `${finalBatch.id} (${finalBatch.totalQuantity.toLocaleString()} packs) signed with ES256 key and committed on-chain.`,
-        duration: 6000,
-      });
+      if (finalBatch.blockchainStatus === 'FAILED') {
+        showToast({
+          type: 'warning',
+          title: 'Batch Created — Blockchain Sync Failed',
+          message: `${finalBatch.id}: Cryptographic QR package generated & uploaded to S3, but Fabric commit failed (${finalBatch.blockchainError || 'Ledger offline'}).`,
+          duration: 8000,
+        });
+      } else {
+        showToast({
+          type: 'success',
+          title: 'Batch Minted & Endorsed to Blockchain',
+          message: `${finalBatch.id} (${finalBatch.totalQuantity.toLocaleString()} packs) signed with ES256 key and committed on-chain.`,
+          duration: 6000,
+        });
+      }
     } catch (err: any) {
       setIsMintingSimulating(false);
       setMintingPhase('IDLE');
@@ -365,23 +398,47 @@ export const CreateBatchWizard: React.FC = () => {
       {/* Main Wizard Body */}
       <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-6 sm:p-8 shadow-subtle">
         {mintingPhase === 'DONE' && createdBatchResult ? (
-          /* Success Screen */
           <div className="text-center py-8 space-y-5 animate-fadeIn">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-
-            <div>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
-                Fabric Block #{createdBatchResult.blockNumber} Endorsed
-              </span>
-              <h3 className="text-2xl font-black text-[var(--text-primary)] mt-2">
-                Batch Successfully Minted & Signed
-              </h3>
-              <p className="text-xs text-[var(--text-muted)] mt-1 font-mono max-w-md mx-auto truncate">
-                TxHash: {createdBatchResult.txHash}
-              </p>
-            </div>
+            {createdBatchResult.blockchainStatus === 'FAILED' ? (
+              <div className="space-y-3">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shadow-lg shadow-amber-500/10">
+                  <AlertTriangle className="w-8 h-8" />
+                </div>
+                <div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono">
+                    ⚠️ Blockchain Sync Pending / Failed
+                  </span>
+                  <h3 className="text-2xl font-black text-[var(--text-primary)] mt-2">
+                    Batch Minted with Blockchain Warning
+                  </h3>
+                  <p className="text-xs text-amber-400/90 mt-1 max-w-md mx-auto font-medium">
+                    {createdBatchResult.blockchainError || 'Hyperledger Fabric was temporarily unreachable.'}
+                  </p>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1 max-w-lg mx-auto">
+                    Cryptographic ES256 QR codes are generated and stored in S3. You can retry syncing this batch to Fabric anytime from the Batches table.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10 mb-4">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
+                    {createdBatchResult.blockNumber
+                      ? `Fabric Block #${createdBatchResult.blockNumber} Endorsed`
+                      : `Hyperledger Fabric: ${createdBatchResult.blockchainRecordedCount || createdBatchResult.totalQuantity} Transitions Committed`}
+                  </span>
+                  <h3 className="text-2xl font-black text-[var(--text-primary)] mt-2">
+                    Batch Successfully Minted & Endorsed
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] mt-1 font-mono max-w-md mx-auto truncate">
+                    Ledger Reference: {createdBatchResult.txHash || `${createdBatchResult.id}:MINTED`}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Comparison Box */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto text-left text-xs">

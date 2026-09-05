@@ -9,9 +9,28 @@ import {
   DashboardStats,
 } from '../../../types';
 
+/**
+ * Read the active route directly from the URL at store-creation time.
+ * This is synchronous and runs before React even mounts, so there is never
+ * a moment where Redux thinks the route is 'dashboard' while the URL says
+ * 'batch-detail' — eliminating the batchId-wipe race condition.
+ */
+const getInitialRouteFromUrl = (): NavRoute => {
+  if (typeof window === 'undefined') return 'dashboard';
+  const params = new URLSearchParams(window.location.search);
+  const route = params.get('route') as NavRoute | null;
+  const validRoutes: NavRoute[] = [
+    'dashboard', 'batches', 'batch-detail', 'create-batch', 'inventory',
+    'qr-codes', 'traceability', 'ledger', 'recalls', 'alerts',
+    'analytics', 'reports', 'orders', 'profile', 'security', 'settings',
+  ];
+  return route && validRoutes.includes(route) ? route : 'dashboard';
+};
+
 export type NavRoute =
   | 'dashboard'
   | 'batches'
+  | 'batch-detail'
   | 'create-batch'
   | 'inventory'
   | 'qr-codes'
@@ -80,14 +99,14 @@ const emptyProfile: ManufacturerProfile = {
   headquarters: '',
   plantLocations: [],
   authorizedPersonnel: [],
-  registeredAt: new Date().toISOString().split('T')[0],
+  registeredAt: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()),
   gstin: '',
   cdscoRegistration: '',
 };
 
 const initialState: DashboardState = {
-  activeRoute: 'dashboard',
-  theme: (typeof window !== 'undefined' && localStorage.getItem('theme') === 'light') ? 'light' : 'dark',
+  activeRoute: getInitialRouteFromUrl(),
+  theme: 'light',
   stats: emptyStats,
   batches: [],
   recalls: [],
@@ -148,6 +167,19 @@ export const dashboardSlice = createSlice({
       state.stats.mintedPacksNumber = totalPacks;
       state.stats.mintedPacks = totalPacks >= 1000 ? `${(totalPacks / 1000).toFixed(0)}k` : `${totalPacks}`;
     },
+    updateBatch(state, action: PayloadAction<Batch>) {
+      state.batches = state.batches.map((b) => (b.id === action.payload.id ? action.payload : b));
+      if (state.selectedBatch?.id === action.payload.id) {
+        state.selectedBatch = action.payload;
+      }
+    },
+    removeBatch(state, action: PayloadAction<string>) {
+      state.batches = state.batches.filter((b) => b.id !== action.payload);
+      state.stats.totalBatches = state.batches.length;
+      if (state.selectedBatch?.id === action.payload) {
+        state.selectedBatch = null;
+      }
+    },
     addRecall(state, action: PayloadAction<RecallRecord>) {
       state.recalls = [action.payload, ...state.recalls];
       state.batches = state.batches.map((b) =>
@@ -171,8 +203,8 @@ export const dashboardSlice = createSlice({
     setActiveRoute(state, action: PayloadAction<NavRoute>) {
       state.activeRoute = action.payload;
     },
-    setTheme(state, action: PayloadAction<'dark' | 'light'>) {
-      state.theme = action.payload;
+    setTheme(state, _action: PayloadAction<'dark' | 'light'>) {
+      state.theme = 'light';
     },
     setSelectedBatch(state, action: PayloadAction<Batch | null>) {
       state.selectedBatch = action.payload;
@@ -209,6 +241,8 @@ export const {
   setDashboardLoading,
   setDashboardError,
   addBatch,
+  updateBatch,
+  removeBatch,
   addRecall,
   updateOrderStatus,
   resolveAlert,

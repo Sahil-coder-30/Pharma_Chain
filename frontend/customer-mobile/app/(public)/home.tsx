@@ -11,9 +11,11 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuthRequest } from "expo-auth-session";
-import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import {
   ScanLine,
   ShieldCheck,
@@ -22,21 +24,10 @@ import {
   Sparkles,
 } from "lucide-react-native";
 import { useAuthStore } from "../../src/store/authStore";
-import { signInWithGoogleCode } from "../../src/services/api/auth.api";
+import { signInWithGoogleToken } from "../../src/services/api/auth.api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-WebBrowser.maybeCompleteAuthSession();
-
-// Stable Redirect URI
-const REDIRECT_URI = 'https://auth.expo.io/@sahilsharma30/temp-app';
-
-const GOOGLE_DISCOVERY = {
-  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
-  tokenEndpoint: 'https://oauth2.googleapis.com/token',
-  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
-};
 
 export default function Home() {
   const router = useRouter();
@@ -44,27 +35,16 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const { setAuth } = useAuthStore();
 
-  const [request, response, promptAsync] = useAuthRequest(
-    {
-      clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'dummy-client-id',
-      scopes: ['openid', 'profile', 'email'],
-      redirectUri: REDIRECT_URI,
-      usePKCE: false,
-    },
-    GOOGLE_DISCOVERY
-  );
-
   useEffect(() => {
-    if (response?.type === "success") {
-      const { code } = response.params;
-      handleBackendSignIn(code);
-    } else if (response?.type === "error") {
-      setLoading(false);
-      Alert.alert("Google Sign-In Error", response.error?.message || "Authentication was cancelled or failed.");
-    } else if (response?.type === "cancel" || response?.type === "dismiss") {
-      setLoading(false);
+    try {
+      GoogleSignin.configure({
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "",
+        offlineAccess: false,
+      });
+    } catch (err) {
+      console.warn("[MediaCare Auth] GoogleSignin configure notice:", err);
     }
-  }, [response]);
+  }, []);
 
   // Animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -218,31 +198,53 @@ export default function Home() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    console.log('[MediaCare Auth] Using redirect URI:', REDIRECT_URI);
     try {
-      await promptAsync();
-      // Loading stays true until the response useEffect resolves it
-    } catch (e) {
-      setLoading(false);
-      Alert.alert("Error", "Failed to open Google Sign-In. Please try again.");
-    }
-  };
+      GoogleSignin.configure({
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "",
+        offlineAccess: false,
+      });
 
-  const handlePatientAccess = handleGoogleSignIn;
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      // Clear any prior cached session so the user gets the native account chooser
+      await GoogleSignin.signOut().catch(() => {});
+      const signInResult = await GoogleSignin.signIn();
 
-  const handleBackendSignIn = async (code: string) => {
-    try {
-      const { user, token } = await signInWithGoogleCode(code, REDIRECT_URI);
-      // Persist token securely for session restore across app restarts
+      // Handle both v12 and v13 return shapes
+      const idToken =
+        (signInResult as any)?.data?.idToken ||
+        (signInResult as any)?.idToken;
+
+      if (!idToken) {
+        throw new Error("No ID token returned by Google.");
+      }
+
+      const { user, token } = await signInWithGoogleToken(idToken);
       await SecureStore.setItemAsync("pharmaToken", token);
       setAuth(user, token);
       router.replace("/(tabs)");
-    } catch (e: any) {
+    } catch (error: any) {
       setLoading(false);
-      Alert.alert(
-        "Authentication Failed",
-        "Could not verify your identity with the PharmaChain server. Please try again."
-      );
+      console.error("[MediaCare Auth] Google Sign-In error:", error);
+
+      if (error?.code === statusCodes?.SIGN_IN_CANCELLED) {
+        // User cancelled the login flow
+        return;
+      } else if (error?.code === statusCodes?.IN_PROGRESS) {
+        // Operation already in progress
+        return;
+      } else if (error?.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert(
+          "Play Services Unavailable",
+          "Google Play Services is not available or needs to be updated on this device."
+        );
+      } else {
+        Alert.alert(
+          "Authentication Notice",
+          error?.response?.data?.message ||
+          error?.message ||
+          "Failed to sign in with Google. Please try again."
+        );
+      }
     }
   };
 
@@ -373,17 +375,18 @@ export default function Home() {
               <Text style={styles.loadingText}>Signing in...</Text>
             </View>
           ) : (
-            <TouchableOpacity
-              style={[styles.googleButton, !request && styles.googleButtonDisabled]}
-              onPress={handleGoogleSignIn}
-              activeOpacity={0.88}
-              disabled={!request}
-            >
-              <View style={styles.googleG}>
-                <Text style={styles.googleGText}>G</Text>
-              </View>
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
+            <View style={styles.buttonStack}>
+              <TouchableOpacity
+                style={styles.googleButton}
+                onPress={handleGoogleSignIn}
+                activeOpacity={0.88}
+              >
+                <View style={styles.googleG}>
+                  <Text style={styles.googleGText}>G</Text>
+                </View>
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           <Text style={styles.footerNote}>
@@ -432,7 +435,10 @@ const styles = StyleSheet.create({
   },
   gridDashes: {
     position: "absolute",
-    inset: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     opacity: 0.03,
     backgroundColor: "transparent",
   },
@@ -649,6 +655,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#FF5342",
     fontWeight: "600",
+  },
+  buttonStack: {
+    width: "100%",
+    gap: 8,
+  },
+  guestButton: {
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  guestButtonText: {
+    color: "#6b7280",
+    fontSize: 12,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
   footerNote: {
     fontSize: 11,

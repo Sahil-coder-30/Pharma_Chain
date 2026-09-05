@@ -10,13 +10,6 @@ import {
   ScanVerificationResponse,
   ScanMode,
 } from '../../../types';
-import {
-  MOCK_INVENTORY,
-  MOCK_SALES_HISTORY,
-  MOCK_INBOUND_INTAKES,
-  MOCK_SHOP_RECALLS,
-  MOCK_FRAUD_INCIDENTS,
-} from '../services/mockData';
 
 interface DashboardState {
   activeRoute: NavRoute;
@@ -54,11 +47,11 @@ const initialState: DashboardState = {
   isMobileSidebarOpen: false,
   theme: (localStorage.getItem('theme') as 'dark' | 'light') || 'dark',
 
-  inventory: MOCK_INVENTORY,
-  sales: MOCK_SALES_HISTORY,
-  inbounds: MOCK_INBOUND_INTAKES,
-  recalls: MOCK_SHOP_RECALLS,
-  fraudReports: MOCK_FRAUD_INCIDENTS,
+  inventory: [],
+  sales: [],
+  inbounds: [],
+  recalls: [],
+  fraudReports: [],
 
   cartItems: [],
   activeScanMode: 'DISPENSE',
@@ -107,6 +100,15 @@ const dashboardSlice = createSlice({
     setSales: (state, action: PayloadAction<SaleTransaction[]>) => {
       state.sales = action.payload;
     },
+    setInbounds: (state, action: PayloadAction<InboundIntakeEvent[]>) => {
+      state.inbounds = action.payload;
+    },
+    setRecalls: (state, action: PayloadAction<ShopRecallAlert[]>) => {
+      state.recalls = action.payload;
+    },
+    setFraudReports: (state, action: PayloadAction<FraudIncidentReport[]>) => {
+      state.fraudReports = action.payload;
+    },
 
     // Cart Reducers for POS Dispensing
     addToCart: (state, action: PayloadAction<POSCartItem>) => {
@@ -136,7 +138,7 @@ const dashboardSlice = createSlice({
       if (inv) {
         inv.packCount += action.payload.packsReceived;
         inv.status = 'IN_STOCK';
-        inv.lastIntakeDate = new Date().toISOString().slice(0, 10);
+        inv.lastIntakeDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
       }
     },
 
@@ -197,6 +199,9 @@ export const {
   setCurrentScanResult,
   setInventory,
   setSales,
+  setInbounds,
+  setRecalls,
+  setFraudReports,
   addToCart,
   removeFromCart,
   clearCart,

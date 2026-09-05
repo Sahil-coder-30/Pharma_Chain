@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Radio,
   FileSpreadsheet,
+  Boxes,
 } from 'lucide-react';
 
 export const DashboardHeader: React.FC = () => {
@@ -77,13 +78,13 @@ export const DashboardHeader: React.FC = () => {
             ))}
           </div>
 
-          {/* Quick Reports Button */}
+          {/* Formulations Catalog Button */}
           <button
-            onClick={() => navigateTo('reports')}
+            onClick={() => navigateTo('inventory')}
             className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] transition-all cursor-pointer"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-amber-500" />
-            <span>Audit Reports</span>
+            <Boxes className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Formulations Catalog</span>
           </button>
 
           {/* Primary Action Button: Create Batch */}

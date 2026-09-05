@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboard } from '../../features/dashboard/Hooks/dashboard.hooks';
 import { StatusBadge } from '../common/StatusBadge';
 import {
   AlertOctagon,
@@ -98,10 +98,10 @@ export const RecallSafetySection: React.FC = () => {
       </div>
 
       {/* Recalls Mini-Table */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+      <div className="table-scroll-container max-h-[380px] rounded-xl border border-slate-200/80">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 text-[11px] font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200">
+          <thead className="sticky top-0 z-10 shadow-xs">
+            <tr className="bg-slate-50/95 backdrop-blur-md text-[11px] font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-200">
               <th className="px-3.5 py-2.5">Batch ID</th>
               <th className="px-3.5 py-2.5">Medicine</th>
               <th className="px-3.5 py-2.5">Recall Reason</th>

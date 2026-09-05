@@ -1,6 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { ShopkeeperUser, KYCStatus } from '../../../types';
-import { MOCK_SHOPKEEPER_PROFILE } from '../../dashboard/services/mockData';
 
 export type AuthView = 'login' | 'register' | 'forgot-password' | 'pending-kyc';
 
@@ -16,11 +15,13 @@ interface AuthState {
   pendingLoginEmail: string | null;
 }
 
+const initialToken = typeof localStorage !== 'undefined' ? localStorage.getItem('shopkeeper_token') : null;
+
 const initialState: AuthState = {
-  isAuthenticated: true, // Default to true for smooth instant demo
-  user: MOCK_SHOPKEEPER_PROFILE,
-  token: 'jwt_mock_token_init',
-  kycStatus: 'APPROVED',
+  isAuthenticated: !!initialToken,
+  user: null,
+  token: initialToken,
+  kycStatus: 'PENDING',
   authView: 'login',
   loading: false,
   error: null,

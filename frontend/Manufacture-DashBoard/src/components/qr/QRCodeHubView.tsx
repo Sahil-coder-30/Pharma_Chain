@@ -15,10 +15,11 @@ import {
   ShieldCheck,
   Sparkles,
   ExternalLink,
+  AlertOctagon,
 } from 'lucide-react';
 
 export const QRCodeHubView: React.FC = () => {
-  const { batches, profile, fetchBatchPreview, downloadBatchCsv } = useDashboard();
+  const { batches, profile, fetchBatchPreview, downloadBatchCsv, mintBatch } = useDashboard();
   const { showToast } = useToast();
 
   const [selectedBatchId, setSelectedBatchId] = useState<string>(
@@ -153,6 +154,28 @@ export const QRCodeHubView: React.FC = () => {
         </div>
       )}
 
+      {/* S3 Failure Notification */}
+      {selectedBatch?.mintStatus === 'FAILED' && (
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-rose-300">
+          <div className="flex items-start gap-2.5">
+            <AlertOctagon className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-rose-200">AWS S3 Minting / Storage Failed</p>
+              <p className="text-[11px] text-rose-300/80 mt-0.5 font-mono break-all">
+                {selectedBatch.mintError || 'Batch failed to store tokens in AWS S3. Local disk fallback is disabled.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => mintBatch(selectedBatch.id)}
+            className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-colors shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Retry S3 Mint</span>
+          </button>
+        </div>
+      )}
+
       {/* Main Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Interactive QR Code Inspector & Barcode Canvas */}
@@ -162,8 +185,8 @@ export const QRCodeHubView: React.FC = () => {
               <span className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider">
                 Live 2D Barcode Preview
               </span>
-              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${isMinted && livePackData ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'}`}>
-                {isMinted && livePackData ? '● Live Authenticated QR' : '○ Mint Required'}
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${isMinted && livePackData ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : selectedBatch?.mintStatus === 'FAILED' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'}`}>
+                {isMinted && livePackData ? '● Live Authenticated QR' : selectedBatch?.mintStatus === 'FAILED' ? '✕ S3 Mint Failed' : '○ Mint Required'}
               </span>
             </div>
 
@@ -177,6 +200,25 @@ export const QRCodeHubView: React.FC = () => {
                   includeMargin={true}
                   className="w-48 h-48 sm:w-56 sm:h-56"
                 />
+              </div>
+            ) : selectedBatch?.mintStatus === 'FAILED' ? (
+              <div className="p-6 my-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 flex flex-col items-center justify-center space-y-3 w-full max-w-[260px] text-center">
+                <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                  <AlertOctagon className="w-6 h-6" />
+                </div>
+                <div className="text-xs space-y-1">
+                  <p className="font-bold text-rose-200">S3 Minting Failed</p>
+                  <p className="text-[11px] text-rose-300/80 font-mono text-center break-words line-clamp-3">
+                    {selectedBatch.mintError || 'AWS S3 upload error'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => mintBatch(selectedBatch.id)}
+                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Retry S3 Mint</span>
+                </button>
               </div>
             ) : (
               <div className="p-8 my-2 rounded-2xl border-2 border-dashed border-[var(--border)] bg-[var(--bg-element)] flex flex-col items-center justify-center space-y-3 w-full max-w-[260px]">

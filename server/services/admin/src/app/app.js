@@ -8,6 +8,9 @@ import dashboardRouter from '../routes/dashboard.routes.js';
 import manufacturerRouter from '../routes/manufacturer.routes.js';
 import shopkeeperRouter from '../routes/shopkeeper.routes.js';
 import auditRouter from '../routes/audit.routes.js';
+import { initIST } from '../utils/time.js';
+
+initIST();
 
 const app = express();
 

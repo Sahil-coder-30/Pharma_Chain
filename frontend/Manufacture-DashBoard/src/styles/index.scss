@@ -4,110 +4,45 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Charcoal-Greyish Dark Theme with Vibrant Amber/Crimson Energy ─── */
-:root {
-  /* Core Yellow-Red & Greyish Brand Tokens */
-  --gov-gold:       #F59E0B;
-  --gov-gold-light: #FBBF24;
-  --gov-amber:      #D97706;
-  --gov-crimson:    #E11D48;
-  --gov-red:        #DC2626;
+/* ─── Modern Crisp Clinical Light Theme (Universal Manufacturer Theme) ───── */
+:root, :root.light-theme {
+  --brand-primary:   #0284C7; /* Medical Deep Cyan */
+  --brand-hover:     #0369A1;
+  --brand-subtle:    rgba(2, 132, 199, 0.12);
 
-  /* Surface System (Greyish / Slate / Charcoal Shades) */
-  --bg-canvas:  #0F1115;
-  --bg-surface: #16181D;
-  --bg-overlay: #1D2027;
-  --bg-element: #252932;
-  --bg-active:  rgba(245, 158, 11, 0.16);
+  --brand-secondary: #059669; /* Emerald */
+  --brand-secondary-hover: #047857;
+  --brand-secondary-subtle: rgba(5, 150, 105, 0.12);
 
-  /* Border System */
-  --border:        #2B303B;
-  --border-strong: #3C4352;
-  --border-glow:   rgba(245, 158, 11, 0.25);
+  --brand-amber:     #D97706;
+  --brand-rose:      #E11D48;
 
-  /* Brand & Accent (Vibrant Amber Gold & Crimson Red) */
-  --brand-primary: #F59E0B; /* Vibrant Gold / Amber */
-  --brand-hover:   #FBBF24;
-  --brand-subtle:  rgba(245, 158, 11, 0.15);
+  /* Surface Hierarchy (Crisp Medical White & Light Slate) */
+  --bg-canvas:  #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-card:    #FFFFFF;
+  --bg-sidebar: #FFFFFF;
+  --bg-overlay: #FFFFFF;
+  --bg-element: #F1F5F9;
+  --bg-active:  rgba(2, 132, 199, 0.08);
 
-  --accent-primary: #E11D48; /* Vibrant Crimson */
-  --accent-hover:   #FB7185;
-  --accent-subtle:  rgba(225, 29, 72, 0.15);
+  /* Border System (Clean Architectural Light Borders) */
+  --border:        #E2E8F0;
+  --border-strong: #CBD5E1;
+  --border-subtle: #E2E8F0;
+  --border-glow:   rgba(2, 132, 199, 0.25);
 
-  /* Typography Hierarchy (WCAG AAA/AA Compliant) */
-  --text-primary:   #F9FAFB;
-  --text-secondary: #E5E7EB;
-  --text-muted:     #9CA3AF;
-  --text-disabled:  #6B7280;
+  /* Typography Hierarchy (WCAG AAA High Contrast) */
+  --text-primary:   #0F172A;
+  --text-secondary: #334155;
+  --text-muted:     #64748B;
+  --text-disabled:  #94A3B8;
 
-  --color-rgb-text: 249, 250, 251;
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-rgb-text: 15, 23, 42;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Alert & Incident Tokens (Dark Mode) */
-  --alert-danger-bg: rgba(225, 29, 72, 0.16);
-  --alert-danger-border: rgba(225, 29, 72, 0.4);
-  --alert-danger-text: #fda4af;
-  --alert-danger-heading: #ffe4e6;
-  --alert-danger-badge-bg: rgba(225, 29, 72, 0.25);
-  --alert-danger-badge-text: #fecdd3;
-
-  --alert-warning-bg: rgba(245, 158, 11, 0.16);
-  --alert-warning-border: rgba(245, 158, 11, 0.4);
-  --alert-warning-text: #fde68a;
-  --alert-warning-heading: #fef3c7;
-  --alert-warning-badge-bg: rgba(245, 158, 11, 0.25);
-  --alert-warning-badge-text: #fef08a;
-
-  --alert-success-bg: rgba(16, 185, 129, 0.14);
-  --alert-success-border: rgba(16, 185, 129, 0.35);
-  --alert-success-text: #a7f3d0;
-  --alert-success-heading: #d1fae5;
-  --alert-success-badge-bg: rgba(16, 185, 129, 0.25);
-  --alert-success-badge-text: #6ee7b7;
-}
-
-/* ─── Bright Vibrant Warm Yellow-Red Light Theme ─────────────────── */
-:root.light-theme {
-  --gov-gold:       #D97706;
-  --gov-gold-light: #F59E0B;
-  --gov-amber:      #B45309;
-  --gov-crimson:    #E11D48;
-  --gov-red:        #DC2626;
-
-  --surface-canvas:  #fffdfa;
-  --surface-chrome:  #fef3c7;
-  --surface-sunken:  #fef08a;
-  --surface-overlay: #ffffff;
-
-  --bg-canvas:  #FFFDF9;
-  --bg-surface: #FFFFFF;
-  --bg-sidebar: #1F232B;
-  --bg-overlay: #FFFFFF;
-  --bg-element: #FFF7ED;
-  --bg-active:  rgba(245, 158, 11, 0.14);
-
-  --border-subtle:      #FED7AA;
-  --border:             #E5E7EB;
-  --border-strong:      #CBD5E1;
-  --border-glow:        rgba(245, 158, 11, 0.25);
-
-  --brand-primary: #D97706; /* Warm Amber Gold */
-  --brand-hover:   #B45309;
-  --brand-subtle:  rgba(245, 158, 11, 0.12);
-
-  --accent-primary: #E11D48; /* Energetic Crimson */
-  --accent-hover:   #BE123C;
-  --accent-subtle:  rgba(225, 29, 72, 0.12);
-
-  --text-primary:   #18181B;
-  --text-secondary: #27272A;
-  --text-muted:     #71717A;
-  --text-disabled:  #A1A1AA;
-
-  --color-rgb-text: 24, 24, 27;
-
-  /* Alert & Incident Tokens (Light Mode) */
+  /* Alert & Incident Tokens */
   --alert-danger-bg: #fff1f2;
   --alert-danger-border: #fecdd3;
   --alert-danger-text: #9f1239;
@@ -136,13 +71,13 @@
   --bg-surface: #000000 !important;
   --bg-overlay: #111111 !important;
   --bg-element: #1a1a1a !important;
-  --text-primary: #ffff00 !important; /* High contrast yellow on black */
+  --text-primary: #ffff00 !important;
   --text-secondary: #ffffff !important;
   --text-muted: #ffff00 !important;
   --border: #ffff00 !important;
   --border-strong: #ffff00 !important;
   --brand-primary: #ffff00 !important;
-  --accent-primary: #ff0055 !important;
+  --brand-secondary: #00ff66 !important;
 }
 
 :root.font-size-large {
@@ -152,7 +87,6 @@
 :root.font-size-xlarge {
   font-size: 120%;
 }
-
 
 @layer base {
   * {
@@ -181,7 +115,6 @@ input:-webkit-autofill:active {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
@@ -201,27 +134,54 @@ input:-webkit-autofill:active {
   background: var(--text-muted);
 }
 
-/* ─── Standardized Action Controls (Yellow-to-Red Dynamic Theme) ───── */
+/* ─── Modern Card & Interaction Utilities (Light Theme) ─────────── */
+.glass-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 4px 16px -2px rgba(15, 23, 42, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.glow-button {
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.25);
+}
+
+.glow-cyan-card:hover {
+  border-color: #0284C7;
+  box-shadow: 0 8px 24px -4px rgba(2, 132, 199, 0.12), 0 0 0 1px #0284C7;
+}
+
+/* Subtle pulse animation for live node sync */
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.18); }
+}
+
+.status-pulse {
+  animation: statusPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ─── Standardized Action Controls (Electric Cyan Theme) ───────────── */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.25rem;
   font-size: 0.75rem;
   font-weight: 700;
-  border-radius: 0.75rem;
-  color: #ffffff;
-  background: linear-gradient(135deg, #F59E0B, #E11D48);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.25);
+  border-radius: 0.5rem;
+  color: #0b0f19;
+  background: linear-gradient(135deg, #06B6D4, #38BDF8);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.35);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(225, 29, 72, 0.35);
-    filter: brightness(1.06);
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.5);
+    filter: brightness(1.08);
   }
 
   &:active {

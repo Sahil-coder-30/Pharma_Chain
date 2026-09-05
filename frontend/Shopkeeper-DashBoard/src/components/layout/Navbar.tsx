@@ -13,9 +13,14 @@ import {
   LogOut,
   User,
   ShieldCheck,
+  Menu,
 } from 'lucide-react';
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+  onToggleMobileMenu?: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu }) => {
   const {
     theme,
     toggleThemeMode,
@@ -35,16 +40,26 @@ export const Navbar: React.FC = () => {
   const activeRecalls = recalls.filter((r) => r.status === 'ACTIVE');
 
   return (
-    <header className="h-16 border-b border-[var(--border)] bg-[var(--bg-surface)] px-4 sm:px-6 flex items-center justify-between gap-4 select-none sticky top-0 z-20">
-      {/* Left: Global Spotlight Search Trigger */}
-      <div className="flex items-center gap-3 flex-1 max-w-md">
+    <header className="h-16 border-b border-[var(--border)] bg-[var(--bg-surface)] px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 select-none sticky top-0 z-20">
+      {/* Left: Mobile Drawer Trigger + Global Spotlight Search Trigger */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-1 max-w-md">
+        {onToggleMobileMenu && (
+          <button
+            onClick={onToggleMobileMenu}
+            className="lg:hidden p-2 rounded-xl border border-[var(--border)] bg-[var(--bg-element)] hover:bg-[var(--bg-active)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0 shadow-xs"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-emerald-500/40 transition-all cursor-pointer shadow-xs"
+          className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-emerald-500/40 transition-all cursor-pointer shadow-xs"
         >
-          <div className="flex items-center gap-2">
-            <Search className="w-3.5 h-3.5 opacity-70" />
-            <span>Search medicines, batches, patient invoices...</span>
+          <div className="flex items-center gap-2 truncate">
+            <Search className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <span className="truncate text-[11px] sm:text-xs">Search medicines, batches, patient invoices...</span>
           </div>
           <kbd className="hidden sm:inline-block font-mono text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border)]">
             ⌘K

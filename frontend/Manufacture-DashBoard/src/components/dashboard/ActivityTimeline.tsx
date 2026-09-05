@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboard } from '../../features/dashboard/Hooks/dashboard.hooks';
 import {
   History,
   CheckCircle2,

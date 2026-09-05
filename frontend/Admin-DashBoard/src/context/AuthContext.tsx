@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AdminUser } from '../types/admin';
 import { api } from '../services/api';
-import { MOCK_ADMIN_USER } from '../services/api/fixtures';
 
 interface AuthContextType {
   user: AdminUser | null;

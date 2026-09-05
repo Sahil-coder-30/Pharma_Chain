@@ -11,7 +11,7 @@ import {
   setKycStatus,
   AuthView,
 } from '../slice/auth.slice';
-import { authApi, DEMO_SHOPKEEPERS } from '../services/auth.api';
+import { authApi } from '../services/auth.api';
 import { ShopkeeperUser, KYCStatus } from '../../../types';
 import { useToast } from '../../../context/ToastContext';
 
@@ -49,6 +49,23 @@ export const useAuth = () => {
     [dispatch, showToast]
   );
 
+  const fetchProfile = useCallback(async () => {
+    try {
+      dispatch(setAuthLoading(true));
+      const user = await authApi.getProfile();
+      dispatch({ type: 'auth/updateProfileSuccess', payload: user });
+      dispatch(setKycStatus(user.kycStatus));
+      dispatch(setAuthLoading(false));
+      return user;
+    } catch (err: any) {
+      dispatch(setAuthLoading(false));
+      if (err?.response?.status === 401) {
+        dispatch(logout());
+      }
+      return null;
+    }
+  }, [dispatch]);
+
   const verify2FA = useCallback(
     async (code: string) => {
       try {
@@ -67,21 +84,6 @@ export const useAuth = () => {
     [dispatch, showToast]
   );
 
-  const switchDemoAccount = useCallback(
-    (key: 'APPROVED' | 'PENDING') => {
-      const demo = DEMO_SHOPKEEPERS[key];
-      if (demo) {
-        dispatch(loginSuccess({ user: demo.user, token: 'demo_token_' + key }));
-        showToast({
-          type: 'info',
-          title: `Loaded Demo Account: ${demo.user.shopName}`,
-          message: `KYC Status: ${demo.user.kycStatus}`,
-        });
-      }
-    },
-    [dispatch, showToast]
-  );
-
   const updateProfile = useCallback(
     async (updated: Partial<ShopkeeperUser>) => {
       if (state.user) {
@@ -93,13 +95,11 @@ export const useAuth = () => {
             title: 'Pharmacy Profile Updated',
             message: 'Establishment details saved to backend.',
           });
-        } catch {
-          const merged = { ...state.user, ...updated };
-          dispatch({ type: 'auth/updateProfileSuccess', payload: merged });
+        } catch (err: any) {
           showToast({
-            type: 'success',
-            title: 'Pharmacy Profile Updated',
-            message: 'Establishment details saved.',
+            type: 'error',
+            title: 'Profile Update Failed',
+            message: err?.response?.data?.message || err.message,
           });
         }
       }
@@ -110,10 +110,10 @@ export const useAuth = () => {
   return {
     ...state,
     login,
+    fetchProfile,
     verify2FA,
     logout: () => dispatch(logout()),
     setAuthView: (v: AuthView) => dispatch(setAuthView(v)),
-    switchDemoAccount,
     updateProfile,
     clearError: () => dispatch(setAuthError(null)),
   };

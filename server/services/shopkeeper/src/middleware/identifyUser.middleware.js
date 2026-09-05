@@ -1,18 +1,20 @@
 // ── identifyUser middleware — shopkeeper-service ──────────────────────────────
-// Mirrors manufacturer-service identifyUser but uses SHOPKEEPER JWT_SECRET.
+// Validates shopkeeper JWT and verifies account status via Redis cache (<1ms).
+// Refreshes a 20-minute sliding window on every active request.
+// Falls back to MongoDB on cache miss. Rejects suspended/unverified pharmacies with 403.
 
 import jwt from 'jsonwebtoken';
+import Shopkeeper from '../models/shopkeeper.model.js';
+import {
+    getCachedShopkeeperStatus,
+    setCachedShopkeeperStatus,
+    refreshShopkeeperStatusTTL,
+} from '../services/redis.service.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET;
+const STATUS_TTL_SECONDS = 20 * 60; // 20 minutes sliding window
 
-/**
- * Validates the shopkeeper's session JWT.
- * Token is read from:
- *   1. Authorization: Bearer <token> header
- *   2. HttpOnly cookie named 'shop_token' (fallback)
- * Attaches req.user and req.authToken on success.
- */
 export const identifyUser = async (req, res, next) => {
     // ── Extract token ─────────────────────────────────────────────────────────
     let token;
@@ -43,6 +45,94 @@ export const identifyUser = async (req, res, next) => {
         req.user.id = decoded.id || decoded.sub;
         req.authToken = token;
 
+        const shopId = req.user.id;
+
+        // ── 1. Check Redis Cache (< 1ms) ──────────────────────────────────────
+        const cachedStatus = await getCachedShopkeeperStatus(shopId);
+
+        if (cachedStatus) {
+            refreshShopkeeperStatusTTL(shopId, STATUS_TTL_SECONDS);
+
+            const vStatus = (cachedStatus.verificationStatus || '').toLowerCase();
+            if (vStatus === 'suspended') {
+                console.warn(`[shopkeeper-service identifyUser] Redis: Access SUSPENDED for ${shopId}`);
+                return res.status(403).json({
+                    status: 'error',
+                    code: 'ACCOUNT_SUSPENDED',
+                    message: 'Your pharmacy drug license has been suspended by the CDSCO regulatory authority.',
+                    reason: cachedStatus.rejectionReason || 'Regulatory compliance freeze.',
+                });
+            }
+
+            if (vStatus === 'rejected') {
+                return res.status(403).json({
+                    status: 'error',
+                    code: 'ACCOUNT_REJECTED',
+                    message: 'Your pharmacy account application has been rejected.',
+                    reason: cachedStatus.rejectionReason || null,
+                });
+            }
+
+            if (vStatus === 'pending') {
+                return res.status(403).json({
+                    status: 'error',
+                    code: 'ACCOUNT_PENDING',
+                    message: 'Your pharmacy account is pending CDSCO license verification.',
+                });
+            }
+
+            req.shopkeeper = cachedStatus;
+            return next();
+        }
+
+        // ── 2. Cache Miss: Query MongoDB ──────────────────────────────────────
+        const shopkeeper = await Shopkeeper.findOne({ shopId }).lean();
+
+        if (!shopkeeper) {
+            console.warn(`[shopkeeper-service identifyUser] Account not found for token shopId: ${shopId}`);
+            return res.status(401).json({ status: 'error', code: 'SHOPKEEPER_NOT_FOUND', message: 'Shopkeeper account not found' });
+        }
+
+        // Cache in Redis with 20 min sliding TTL
+        const statusPayload = {
+            shopId:             shopkeeper.shopId,
+            shopName:           shopkeeper.shop?.name,
+            drugLicenseNumber:  shopkeeper.license?.drugLicenseNumber,
+            verificationStatus: shopkeeper.verificationStatus,
+            rejectionReason:    shopkeeper.rejectionReason,
+            verifiedAt:         shopkeeper.verifiedAt,
+            ownerEmail:         shopkeeper.owner?.email,
+        };
+        await setCachedShopkeeperStatus(shopId, statusPayload, STATUS_TTL_SECONDS);
+
+        const vStatus = (shopkeeper.verificationStatus || '').toLowerCase();
+        if (vStatus === 'suspended') {
+            return res.status(403).json({
+                status: 'error',
+                code: 'ACCOUNT_SUSPENDED',
+                message: 'Your pharmacy drug license has been suspended by the CDSCO regulatory authority.',
+                reason: shopkeeper.rejectionReason || 'Regulatory compliance freeze.',
+            });
+        }
+
+        if (vStatus === 'rejected') {
+            return res.status(403).json({
+                status: 'error',
+                code: 'ACCOUNT_REJECTED',
+                message: 'Your pharmacy account application has been rejected.',
+                reason: shopkeeper.rejectionReason || null,
+            });
+        }
+
+        if (vStatus === 'pending') {
+            return res.status(403).json({
+                status: 'error',
+                code: 'ACCOUNT_PENDING',
+                message: 'Your pharmacy account is pending CDSCO license verification.',
+            });
+        }
+
+        req.shopkeeper = shopkeeper;
         next();
     } catch (err) {
         console.error('[shopkeeper-service Auth] JWT verification failed:', err.message);

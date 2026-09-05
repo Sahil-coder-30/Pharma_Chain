@@ -43,10 +43,41 @@ export const SalesHistoryView: React.FC = () => {
   };
 
   const handleExportSales = () => {
+    if (sales.length === 0) {
+      showToast({
+        type: 'warning',
+        title: 'No Sales to Export',
+        message: 'There are no counter sales transactions to export.',
+      });
+      return;
+    }
+
+    const headers = ['Invoice No', 'Timestamp', 'Patient Name', 'Phone', 'Payment Mode', 'Grand Total', 'Fabric Tx ID', 'Block Number'];
+    const rows = sales.map((s) => [
+      `"${s.invoiceNo}"`,
+      `"${s.timestamp}"`,
+      `"${(s.patientName || '').replace(/"/g, '""')}"`,
+      `"${s.patientPhone || ''}"`,
+      s.paymentMode,
+      s.grandTotal,
+      `"${s.fabricTxId || ''}"`,
+      s.blockNumber,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    const istDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+    link.setAttribute('download', `Pharmacy_Sales_Audit_${istDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
     showToast({
       type: 'success',
       title: 'Sales Ledger Exported',
-      message: 'Retail_Pharmacy_Sales_Fabric_Audit.csv generated.',
+      message: 'Retail pharmacy sales CSV audit downloaded successfully.',
     });
   };
 

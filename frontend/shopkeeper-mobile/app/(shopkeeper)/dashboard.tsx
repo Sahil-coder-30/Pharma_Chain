@@ -136,7 +136,7 @@ export default function DashboardScreen() {
                 </View>
                 <View style={styles.peerPill}>
                   <Radio size={10} color={PharmaTheme.colors.primary} />
-                  <Text style={styles.peerPillText}>24ms</Text>
+                  <Text style={styles.peerPillText}>Online</Text>
                 </View>
               </View>
               <Text style={styles.storeTitleText} numberOfLines={1}>
@@ -155,11 +155,11 @@ export default function DashboardScreen() {
           <View style={styles.heroHeader}>
             <View style={styles.heroBadge}>
               <PharmaChainLogo size={14} colorScheme="white" style={{ marginRight: 4 }} />
-              <Text style={styles.heroBadgeText}>PHARMACHAIN POS TERMINAL</Text>
+              <Text style={styles.heroBadgeText}>PHARMACHAIN PHARMACY POS</Text>
             </View>
             <Text style={styles.heroHeading}>Ready to Scan & Audit</Text>
             <Text style={styles.heroDescription}>
-              Instantly verify 2D DataMatrix security codes on pharmaceutical shipments and burn sale tokens on the blockchain.
+              Instantly verify 2D DataMatrix packaging and record dispensations on the blockchain.
             </Text>
           </View>
 
@@ -286,10 +286,10 @@ export default function DashboardScreen() {
               <ShoppingCart size={22} color="#4f46e5" />
             </View>
             <Text style={styles.opTitleText}>Dispense POS</Text>
-            <Text style={styles.opDescText}>Burn sale tokens</Text>
+            <Text style={styles.opDescText}>Record customer dispense</Text>
           </TouchableOpacity>
 
-          {/* Op 3: Inventory Vault */}
+          {/* Op 3: Inventory */}
           <TouchableOpacity
             style={styles.operationGlassTile}
             onPress={() => router.push('/(shopkeeper)/inventory')}
@@ -298,8 +298,8 @@ export default function DashboardScreen() {
             <View style={[styles.opIconCircle, { backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }]}>
               <Boxes size={22} color="#0284c7" />
             </View>
-            <Text style={styles.opTitleText}>Stock Vault</Text>
-            <Text style={styles.opDescText}>Batch inventory & racks</Text>
+            <Text style={styles.opTitleText}>Inventory</Text>
+            <Text style={styles.opDescText}>Batch stock & supply levels</Text>
           </TouchableOpacity>
 
           {/* Op 4: Audit Trail */}

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { ShieldCheck, ArrowLeft, ScanLine, Sparkles } from 'lucide-react-native';
+import { ShieldCheck, ArrowLeft, ScanLine, Sparkles, Camera as CameraIcon } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -63,23 +63,38 @@ export default function PublicScanScreen() {
     setTimeout(() => setScanned(false), 2000);
   };
 
-  const handleDemoScan = () => {
-    if (scanned) return;
-    setScanned(true);
-    router.push({
-      pathname: '/scan-result',
-      params: {
-        status: 'authentic',
-        qrData: 'PC-JWT-GENUINE-BATCH-PCM-2026-SUNPHARMA',
-      },
-    });
-    setTimeout(() => setScanned(false), 2000);
-  };
-
   if (hasPermission === null) {
     return (
       <View style={styles.container}>
         <Text style={styles.infoText}>Requesting camera access...</Text>
+      </View>
+    );
+  }
+
+  if (hasPermission === false) {
+    return (
+      <View style={[styles.container, styles.permissionContainer]}>
+        <View style={styles.permissionIconCircle}>
+          <CameraIcon size={40} color="#FF5342" />
+        </View>
+        <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <Text style={styles.permissionSubtitle}>
+          PharmaChain needs camera permission to scan 2D DataMatrix packaging tokens and verify medicine authenticity.
+        </Text>
+        <TouchableOpacity
+          style={styles.permissionBtn}
+          onPress={async () => {
+            const { status } = await Camera.requestCameraPermissionsAsync();
+            setHasPermission(status === 'granted');
+          }}
+          activeOpacity={0.85}
+        >
+          <ShieldCheck size={18} color="#ffffff" />
+          <Text style={styles.permissionBtnText}>Enable Camera Access</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()}>
+          <Text style={styles.cancelBtnText}>Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -89,7 +104,7 @@ export default function PublicScanScreen() {
       <CameraView
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         barcodeScannerSettings={{
-          barcodeTypes: ['qr'],
+          barcodeTypes: ['qr', 'datamatrix'],
         }}
         style={StyleSheet.absoluteFillObject}
       />
@@ -138,15 +153,6 @@ export default function PublicScanScreen() {
 
         {/* Bottom Actions */}
         <View style={styles.bottomSection}>
-          <TouchableOpacity
-            style={styles.demoBtn}
-            onPress={handleDemoScan}
-            activeOpacity={0.85}
-          >
-            <Sparkles size={16} color="#ffffff" />
-            <Text style={styles.demoBtnText}>Test Genuine Scan (Live Journey)</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
           </TouchableOpacity>
@@ -299,5 +305,55 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     textAlign: 'center',
+  },
+  permissionContainer: {
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  permissionIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FBD9DC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  permissionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  permissionSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 28,
+    maxWidth: 300,
+  },
+  permissionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FF5342',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 999,
+    marginBottom: 14,
+    shadowColor: '#FF5342',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  permissionBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ffffff',
   },
 });

@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboard } from '../../features/dashboard/Hooks/dashboard.hooks';
 import { TrendingUp, Layers, PackageCheck, Truck } from 'lucide-react';
 
 type TimeRange = '1W' | '1M' | '1Y';

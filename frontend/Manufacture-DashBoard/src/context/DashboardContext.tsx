@@ -9,6 +9,7 @@ import {
   DashboardStats,
 } from '../types';
 import { useToast } from './ToastContext';
+import { formatISTDateString, formatISTISOString } from '../features/dashboard/service/dashboard.api';
 
 export type NavItem =
   | 'dashboard'
@@ -83,7 +84,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     headquarters: '',
     plantLocations: [],
     authorizedPersonnel: [],
-    registeredAt: new Date().toISOString().split('T')[0],
+    registeredAt: formatISTDateString(),
     gstin: '',
     cdscoRegistration: '',
   });
@@ -138,7 +139,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               ...b,
               mintStatus: 'RECALLED',
               recallReason: reason,
-              recallDate: new Date().toISOString(),
+              recallDate: formatISTISOString(),
             }
           : b
       )
@@ -151,7 +152,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       medicineName: targetBatch.medicineName,
       dosage: targetBatch.dosage,
       reason,
-      date: new Date().toISOString(),
+      date: formatISTISOString(),
       affectedPacks: targetBatch.totalQuantity,
       status: 'ACTIVE',
       initiatedBy: `${profile.authorizedPersonnel[0].name} (${profile.authorizedPersonnel[0].role})`,
@@ -184,7 +185,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           ? {
               ...ord,
               status: newStatus,
-              dispatchedAt: newStatus === 'SHIPPED' ? new Date().toISOString() : ord.dispatchedAt,
+              dispatchedAt: newStatus === 'SHIPPED' ? formatISTISOString() : ord.dispatchedAt,
               trackingNumber: newStatus === 'SHIPPED' ? `TRK-BLUEDART-${Math.floor(1000000 + Math.random() * 9000000)}` : ord.trackingNumber,
             }
           : ord

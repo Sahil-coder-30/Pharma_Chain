@@ -19,6 +19,7 @@ export const ShopkeepersPage: React.FC = () => {
     approveShopkeeper,
     rejectShopkeeper,
     suspendShopkeeper,
+    unsuspendShopkeeper,
   } = useAdminData();
 
   const [activeTab, setActiveTab] = useState<'all' | ShopkeeperStatus>('pending');
@@ -83,6 +84,15 @@ export const ShopkeepersPage: React.FC = () => {
       await suspendShopkeeper(suspendingShop.shopId, reason);
       setSuspendingShop(null);
       setInspectingShop(null);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUnsuspend = async (shop: ShopkeeperRecord) => {
+    setActionLoading(true);
+    try {
+      await unsuspendShopkeeper(shop.shopId);
     } finally {
       setActionLoading(false);
     }
@@ -246,6 +256,7 @@ export const ShopkeepersPage: React.FC = () => {
                 filteredData.map((shop) => {
                   const isPending = shop.verificationStatus === 'pending';
                   const isApproved = shop.verificationStatus === 'approved' || shop.verificationStatus === 'verified';
+                  const isSuspended = shop.verificationStatus === 'suspended';
                   const isExpired = new Date(shop.licenseExpiryDate) < new Date();
 
                   return (
@@ -339,6 +350,16 @@ export const ShopkeepersPage: React.FC = () => {
                               onClick={() => setSuspendingShop(shop)}
                             >
                               Suspend
+                            </Button>
+                          )}
+
+                          {isSuspended && (
+                            <Button
+                              variant="success"
+                              size="sm"
+                              onClick={() => handleUnsuspend(shop)}
+                            >
+                              Unsuspend
                             </Button>
                           )}
                         </div>

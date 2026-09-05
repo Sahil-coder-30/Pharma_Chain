@@ -5,94 +5,146 @@ import {
   QrCode,
   Layers,
   AlertOctagon,
-  Search,
   FileSpreadsheet,
   ArrowUpRight,
+  Database,
+  KeyRound,
+  ShieldAlert,
 } from 'lucide-react';
+
+interface ActionItem {
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: React.ReactNode;
+  badge: string;
+  action: () => void;
+  iconBg: string;
+  glow: string;
+  danger?: boolean;
+}
 
 export const DashboardQuickActions: React.FC = () => {
   const { navigateTo, setIsRecallModalOpen } = useDashboard();
 
-  const actions = [
+  const manufacturingActions: ActionItem[] = [
     {
       title: 'Create Production Batch',
-      description: 'Register formula & sign cryptographic block',
-      icon: <PlusCircle className="w-5 h-5 text-amber-500" />,
+      subtitle: 'Schedule M Compliance Wizard',
+      description: 'Onboard tier-2 formulation specs, packaging hierarchy and sign batch initiation.',
+      icon: <PlusCircle className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />,
+      badge: 'Step-by-Step',
       action: () => navigateTo('create-batch'),
-      badge: 'New',
+      iconBg: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400',
+      glow: 'hover:border-cyan-500/50',
     },
     {
-      title: 'GS1 QR Code Hub',
-      description: 'Export 2D DataMatrix print-ready packages',
-      icon: <QrCode className="w-5 h-5 text-amber-500" />,
+      title: 'GS1 2D DataMatrix Hub',
+      subtitle: 'Thermal Print Packages',
+      description: 'Export high-speed thermal label print packages and download packaging manifests from S3.',
+      icon: <QrCode className="w-5 h-5 text-teal-600 dark:text-teal-400" />,
+      badge: 'S3 Export',
       action: () => navigateTo('qr-codes'),
+      iconBg: 'bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400',
+      glow: 'hover:border-teal-500/50',
     },
     {
-      title: 'Medicine Inventory',
-      description: 'Real-time SKU stock levels and warehouse silos',
-      icon: <Layers className="w-5 h-5 text-amber-500" />,
+      title: 'Master Formulations Catalog',
+      subtitle: 'Drug Registration Directory',
+      description: 'Browse approved APIs, therapeutic categories, drug schedules (Schedule H/H1) and strengths.',
+      icon: <FileSpreadsheet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
+      badge: 'CDSCO Approved',
       action: () => navigateTo('inventory'),
+      iconBg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+      glow: 'hover:border-emerald-500/50',
+    },
+  ];
+
+  const complianceActions: ActionItem[] = [
+    {
+      title: 'Fabric Blockchain Explorer',
+      subtitle: 'Immutable Zero-Trust Ledger',
+      description: 'Audit raw block commits, transaction payloads, consensus endorsements and block heights.',
+      icon: <Database className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />,
+      badge: 'Block #1.48M',
+      action: () => navigateTo('ledger'),
+      iconBg: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-600 dark:text-cyan-400',
+      glow: 'hover:border-cyan-500/50',
     },
     {
-      title: 'Traceability Explorer',
-      description: 'Zero-trust custody hops and dispensary verification',
-      icon: <Search className="w-5 h-5 text-amber-500" />,
-      action: () => navigateTo('traceability'),
-    },
-    {
-      title: 'Regulatory Audit Dossiers',
-      description: 'Generate GMP compliance & batch audit logs',
-      icon: <FileSpreadsheet className="w-5 h-5 text-amber-500" />,
-      action: () => navigateTo('reports'),
-    },
-    {
-      title: 'Initiate Recall Notice',
-      description: 'Trigger statutory batch isolation protocol',
-      icon: <AlertOctagon className="w-5 h-5 text-rose-500" />,
+      title: 'Initiate Statutory Recall',
+      subtitle: 'GSR 1337(E) Isolation Directive',
+      description: 'Broadcast instant quarantine locks to all pharmacy retail checkout POS systems in real-time.',
+      icon: <AlertOctagon className="w-5 h-5 text-rose-600 dark:text-rose-400" />,
+      badge: 'Instant POS Lock',
       action: () => setIsRecallModalOpen(true),
+      iconBg: 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400',
+      glow: 'hover:border-rose-500/50',
       danger: true,
+    },
+    {
+      title: 'Cryptographic HSM Key Vault',
+      subtitle: 'ECDSA P-256 Vault Management',
+      description: 'Inspect AES-256 hardware security module key integrity, authorization certificates and signatures.',
+      icon: <KeyRound className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+      badge: 'Hardware HSM',
+      action: () => navigateTo('security'),
+      iconBg: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400',
+      glow: 'hover:border-amber-500/50',
     },
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 pt-2">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-black uppercase tracking-wider text-[var(--text-primary)]">
-            Operational Workflows
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-base font-bold text-[var(--text-primary)]">
+            Operational Workflow Action Matrix
           </h2>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--bg-element)] text-[var(--text-muted)] border border-[var(--border)]">
-            Core Actions
+          <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-[var(--bg-element)] text-[var(--text-muted)] border border-[var(--border)]">
+            6 Statutory Workflows
           </span>
         </div>
-        <span className="text-xs text-[var(--text-muted)]">Instant Execution</span>
+        <span className="text-xs text-[var(--text-muted)] font-mono hidden sm:inline">Zero-Trust Instant Execution</span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {actions.map((item, idx) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {[...manufacturingActions, ...complianceActions].map((item, idx) => (
           <div
             key={idx}
             onClick={item.action}
-            className={`p-4 rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] hover:bg-[var(--bg-element)] hover:border-amber-500/40 transition-all duration-200 cursor-pointer group flex flex-col justify-between space-y-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 ${
-              item.danger ? 'hover:border-rose-500/40' : ''
-            }`}
+            className={`glass-card p-4 sm:p-5 rounded-2xl border border-[var(--border)] transition-all duration-200 cursor-pointer group flex flex-col justify-between shadow-xs hover:shadow-md hover:-translate-y-0.5 ${item.glow}`}
           >
-            <div className="flex items-center justify-between">
-              <div className="p-2.5 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] group-hover:border-amber-500/30 transition-colors">
-                {item.icon}
-              </div>
-              <ArrowUpRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-amber-500 transition-colors transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </div>
-
             <div>
-              <div className="flex items-center gap-1.5">
-                <h4 className="text-xs font-bold text-[var(--text-primary)] group-hover:text-amber-500 transition-colors truncate">
-                  {item.title}
-                </h4>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className={`p-2.5 rounded-xl border flex items-center justify-center transition-transform group-hover:scale-105 ${item.iconBg}`}>
+                  {item.icon}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md border ${
+                    item.danger
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      : 'bg-[var(--bg-element)] text-[var(--text-muted)] border-[var(--border)]'
+                  }`}>
+                    {item.badge}
+                  </span>
+                  <div className="p-1 rounded-lg text-[var(--text-muted)] group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                    <ArrowUpRight className="w-4 h-4 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </div>
+                </div>
               </div>
-              <p className="text-[10px] text-[var(--text-muted)] mt-1 line-clamp-2 leading-tight">
-                {item.description}
-              </p>
+
+              <div>
+                <h3 className="text-sm font-bold text-[var(--text-primary)] group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                  {item.title}
+                </h3>
+                <p className="text-[11px] font-medium text-cyan-600 dark:text-cyan-400/90 mt-0.5 font-mono">
+                  {item.subtitle}
+                </p>
+                <p className="text-xs text-[var(--text-muted)] mt-2 leading-relaxed">
+                  {item.description}
+                </p>
+              </div>
             </div>
           </div>
         ))}

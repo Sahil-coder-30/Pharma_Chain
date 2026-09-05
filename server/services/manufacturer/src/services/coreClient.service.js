@@ -59,7 +59,7 @@ export const generateKeyForManufacturer = async (manufacturerId, authToken) => {
  *   s3FileKey:               string,
  *   s3DownloadUrl:           string,
  *   s3UrlExpiresAt:          string|null,
- *   s3Mode:                  'aws'|'local',
+ *   s3Mode:                  'aws',
  *   backendSubmitted:        boolean,
  *   partialBlockchainSubmit: boolean,
  *   blockchainRecorded:      number,
@@ -85,7 +85,26 @@ export const mintBatchViaPharmaCore = async ({ batchId, manufacturerId, expiryDa
     } catch (err) {
         if (err.response?.data?.code === 'KEY_NOT_FOUND') {
             console.log(`[manufacturer-service CoreClient] Key not found for ${manufacturerId} — auto-generating EC key and retrying mint...`);
-            await generateKeyForManufacturer(manufacturerId, authToken);
+            const keyRes = await generateKeyForManufacturer(manufacturerId, authToken);
+            if (keyRes?.publicKeyPem) {
+                try {
+                    const Manufacturer = (await import('../models/manufacturer.model.js')).default;
+                    await Manufacturer.updateOne(
+                        { manufacturerId },
+                        {
+                            $addToSet: { publicKeys: keyRes.publicKeyPem },
+                            $set: {
+                                publicKeyPem: keyRes.publicKeyPem,
+                                keyId: keyRes.keyId || `mfr-key-${manufacturerId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                                hasSigningKey: true,
+                            },
+                        }
+                    );
+                    console.log(`[manufacturer-service CoreClient] Persisted newly generated public key to MongoDB for ${manufacturerId}`);
+                } catch (dbErr) {
+                    console.warn(`[manufacturer-service CoreClient] Non-fatal DB update notice for ${manufacturerId}:`, dbErr.message);
+                }
+            }
             const response = await getCoreClient(authToken).post('/core/batch/mint', {
                 batchId,
                 manufacturerId,
@@ -141,7 +160,7 @@ export const recallBatchViaPharmaCore = async ({ batchId, manufacturerId, reason
  * @returns {Promise<{
  *   status:  'success',
  *   batchId: string,
- *   s3Mode:  'aws'|'local',
+ *   s3Mode:  'aws',
  *   stats:   { totalPacks: number, filteredPacks: number, csvSizeBytes: number },
  *   meta:    { page: number, limit: number, pages: number, total: number },
  *   packs:   Array<{ serialNumber, packHash, signedToken, verifyUrl, medicineName, expiryDate, qrPreviewUrl }>
@@ -183,5 +202,31 @@ export const fetchBatchCsvStreamViaPharmaCore = async (batchId, authToken, s3Fil
         },
     );
     return response;
+};
+
+/**
+ * Verifies an ES256 signed JWT from a QR code via pharma-core.
+ * @param {Object} params - { signedToken, authToken }
+ * @returns {Promise<{ valid: boolean, payload?: any, packHash?: string, code?: string, message?: string }>}
+ */
+export const verifyPackViaPharmaCore = async ({ signedToken, authToken }) => {
+    const response = await getCoreClient(authToken).post('/core/hash/verify', { signedToken });
+    return response.data;
+};
+
+/**
+ * Retrieves the live on-chain status of a pack hash from Fabric via pharma-core.
+ * @param {Object} params - { packHash, batchId, authToken }
+ * @returns {Promise<Object>}
+ */
+export const getPackStatusViaPharmaCore = async ({ packHash, batchId, authToken }) => {
+    const response = await getCoreClient(authToken).get(
+        `/core/hash/status/${encodeURIComponent(packHash)}`,
+        {
+            params: { batchId: batchId || undefined },
+            timeout: 15_000,
+        },
+    );
+    return response.data;
 };
 

@@ -20,17 +20,23 @@ export const BlockchainLedgerView: React.FC = () => {
   const { showToast } = useToast();
 
   const liveTransitions: TransitionRecord[] = useMemo(() => {
-    return batches.map((b, idx) => ({
-      hash: b.txHash || `0x${b.id.replace(/[^a-f0-9]/gi, '')}9491a82f:MFG`,
-      blockNumber: b.blockNumber || (18430 + idx),
+    return batches.map((b) => ({
+      hash: b.txHash || `${b.id}:MINTED`,
+      blockNumber: b.blockNumber || undefined,
       timestamp: b.createdAt,
-      state: (b.mintStatus === 'RECALLED' ? 'RECALLED' : 'COMMITTED') as any,
+      state: (b.mintStatus === 'RECALLED'
+        ? 'RECALLED'
+        : b.blockchainStatus === 'FAILED'
+        ? 'FAILED'
+        : 'COMMITTED') as any,
       payload: {
         batchId: b.id,
         medicineName: b.medicineName,
         totalQuantity: b.totalQuantity,
         manufacturerId: b.manufacturerId,
         mintStatus: b.mintStatus,
+        blockchainStatus: b.blockchainStatus || 'COMMITTED',
+        blockchainError: b.blockchainError,
       },
     }));
   }, [batches]);

@@ -17,7 +17,7 @@ import {
   ChevronDown,
   X,
   Truck,
-  Sparkles,
+  Landmark,
   ArrowRight,
   ShieldCheck,
 } from 'lucide-react';
@@ -57,21 +57,21 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
       id: 'overview',
       label: 'Overview',
       description: 'Executive KPIs, Telemetry & Recent Activity',
-      icon: <LayoutDashboard className="w-4 h-4 text-amber-500" />,
+      icon: <LayoutDashboard className="w-4 h-4 text-emerald-500" />,
       routes: [
         {
           id: 'dashboard',
           label: 'Dashboard Overview',
-          description: 'Live KPIs, batch charts & recall telemetry',
+          description: 'Live KPIs, batch metrics & ledger telemetry',
           icon: <LayoutDashboard className="w-4 h-4" />,
         },
       ],
     },
     {
       id: 'manufacturing',
-      label: 'Manufacturing & Operations',
-      description: 'Batch production, GS1 serialization & inventory',
-      icon: <Boxes className="w-4 h-4 text-amber-500" />,
+      label: 'Manufacturing & Catalog',
+      description: 'Batch production, GS1 serialization & catalog',
+      icon: <Boxes className="w-4 h-4 text-emerald-500" />,
       routes: [
         {
           id: 'batches',
@@ -87,98 +87,56 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
         },
         {
           id: 'inventory',
-          label: 'Medicine Inventory',
-          description: 'Formulation stock, warehouse slots & stock levels',
-          icon: <Boxes className="w-4 h-4" />,
+          label: 'Formulations Catalog',
+          description: 'Live master drug specifications and batch aggregation',
+          icon: <FileSpreadsheet className="w-4 h-4" />,
         },
         {
           id: 'qr-codes',
-          label: 'QR Code Operations',
-          description: 'GS1 DataMatrix hub, bulk export & label print',
+          label: 'QR Packaging Hub',
+          description: 'GS1 DataMatrix hub, S3 CSV export & pack verification',
           icon: <QrCode className="w-4 h-4" />,
         },
       ],
     },
     {
-      id: 'traceability',
-      label: 'Blockchain Traceability',
-      description: 'Zero-trust Fabric ledger & node audit trails',
-      icon: <Database className="w-4 h-4 text-amber-500" />,
+      id: 'compliance',
+      label: 'Blockchain & Compliance',
+      description: 'Zero-trust Fabric ledger & recall management',
+      icon: <Database className="w-4 h-4 text-emerald-500" />,
       routes: [
-        {
-          id: 'traceability',
-          label: 'Traceability Explorer',
-          description: 'End-to-end supply chain path & custody handoffs',
-          icon: <Search className="w-4 h-4" />,
-        },
         {
           id: 'ledger',
           label: 'Fabric Ledger Explorer',
           description: 'Raw cryptographic block heights, transactions & hashes',
           icon: <Database className="w-4 h-4" />,
         },
-      ],
-    },
-    {
-      id: 'safety',
-      label: 'Safety & Recalls',
-      description: 'Emergency recall execution & quality alerts',
-      icon: <AlertOctagon className="w-4 h-4 text-rose-500" />,
-      routes: [
         {
           id: 'recalls',
-          label: 'Recall & Safety Center',
-          description: 'Immediate multi-echelon recall command center',
+          label: 'Recall Command Center',
+          description: 'Immediate statutory recall & quarantine protocol',
           icon: <AlertOctagon className="w-4 h-4" />,
           badge: activeRecallsCount > 0 ? activeRecallsCount : undefined,
           badgeColor: 'bg-rose-500 text-white',
-        },
-        {
-          id: 'alerts',
-          label: 'Quality & Security Alerts',
-          description: 'Real-time suspicious verification & cold-chain breaches',
-          icon: <BellRing className="w-4 h-4" />,
-          badge: unresolvedAlertsCount > 0 ? unresolvedAlertsCount : undefined,
-          badgeColor: 'bg-amber-500 text-slate-950',
-        },
-      ],
-    },
-    {
-      id: 'analytics',
-      label: 'Analytics & Logistics',
-      description: 'Production intelligence & B2B shipments',
-      icon: <BarChart3 className="w-4 h-4 text-amber-500" />,
-      routes: [
-        {
-          id: 'analytics',
-          label: 'Production Analytics',
-          description: 'Throughput metrics, yields & seasonal trends',
-          icon: <BarChart3 className="w-4 h-4" />,
-        },
-        {
-          id: 'reports',
-          label: 'Regulatory Reports',
-          description: 'CDSCO compliance dossiers & CSV audit dumps',
-          icon: <FileSpreadsheet className="w-4 h-4" />,
-        },
-        {
-          id: 'orders',
-          label: 'B2B Orders & Shipments',
-          description: 'Wholesaler dispatches & transit custody validation',
-          icon: <Truck className="w-4 h-4" />,
         },
       ],
     },
     {
       id: 'organization',
-      label: 'Organization & Legal',
+      label: 'Facility Administration',
       description: 'Corporate license & cryptographic key vault',
-      icon: <Building2 className="w-4 h-4 text-amber-500" />,
+      icon: <Building2 className="w-4 h-4 text-emerald-500" />,
       routes: [
+        {
+          id: 'settings',
+          label: 'Settings & Key Vault',
+          description: 'Facility profile, CDSCO Form 28-D & ES256 hardware vault',
+          icon: <ShieldCheck className="w-4 h-4" />,
+        },
         {
           id: 'profile',
           label: 'Company Legal Profile',
-          description: 'Manufacturing license, plant facilities & authorized signatories',
+          description: 'Manufacturing license, plant facilities & authorized personnel',
           icon: <Building2 className="w-4 h-4" />,
         },
         {
@@ -227,15 +185,15 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
       {/* ─────────────────────────────────────────────────────────────
           1. HORIZONTAL CATEGORY NAVIGATION RIBBON
       ───────────────────────────────────────────────────────────── */}
-      <nav className="bg-[var(--bg-element)] border-b border-[var(--border)] px-4 sm:px-8 lg:px-10 relative z-30 text-xs select-none overflow-visible">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 py-1" ref={dropdownRef}>
+      <nav className="bg-[var(--bg-element)] border-b border-[var(--border)] px-4 sm:px-6 lg:px-8 xl:px-10 relative z-30 text-xs select-none overflow-visible">
+        <div className="max-w-[1880px] mx-auto flex items-center justify-between gap-1 py-1" ref={dropdownRef}>
           <div className="flex items-center gap-1 flex-wrap">
             {/* Overview / Dashboard */}
             <button
               onClick={() => handleNav('dashboard')}
               className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 transition-all cursor-pointer ${
                 activeRoute === 'dashboard'
-                  ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-xs'
+                  ? 'bg-gradient-to-r from-cyan-600 to-teal-500 text-white shadow-md shadow-cyan-900/30 font-extrabold'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-active)]'
               }`}
             >
@@ -259,7 +217,7 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
                     onClick={() => setActiveDropdown(isDropdownOpen ? null : cat.id)}
                     className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                       isCatActive
-                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-extrabold'
+                        ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-extrabold'
                         : isDropdownOpen
                         ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
                         : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-active)]'
@@ -270,7 +228,7 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
                     {cat.id === 'safety' && (activeRecallsCount > 0 || unresolvedAlertsCount > 0) && (
                       <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
                     )}
-                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-amber-500' : ''}`} />
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`} />
                   </button>
 
                   {/* Dropdown Floating Menu */}
@@ -293,11 +251,11 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
                               onClick={() => handleNav(sub.id)}
                               className={`w-full flex items-start gap-2.5 p-2.5 rounded-xl text-left transition-all cursor-pointer ${
                                 isSubActive
-                                  ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-xs font-semibold'
+                                  ? 'bg-gradient-to-r from-cyan-600 to-teal-600 text-white shadow-xs font-semibold'
                                   : 'hover:bg-[var(--bg-element)] text-[var(--text-primary)]'
                               }`}
                             >
-                              <span className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${isSubActive ? 'bg-white/20 text-white' : 'bg-[var(--bg-element)] text-amber-500'}`}>
+                              <span className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${isSubActive ? 'bg-white/20 text-white' : 'bg-[var(--bg-element)] text-cyan-400'}`}>
                                 {sub.icon}
                               </span>
                               <div className="flex-1 min-w-0">
@@ -328,7 +286,7 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
           <div className="hidden lg:flex items-center gap-2 shrink-0">
             <button
               onClick={() => handleNav('create-batch')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold text-[11px] shadow-xs transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-slate-950 font-extrabold text-[11px] shadow-md shadow-cyan-500/25 transition-all transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span>+ Create Batch</span>
@@ -350,7 +308,7 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
 
           {/* Drawer Panel */}
           <div className="relative z-50 bg-[var(--bg-surface)] border-b border-[var(--border)] shadow-2xl p-4 sm:p-8 max-h-[85vh] overflow-y-auto w-full">
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="max-w-[1880px] mx-auto space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
                 <div className="flex items-center gap-3">
@@ -405,11 +363,11 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
                             onClick={() => handleNav(route.id)}
                             className={`w-full flex items-start gap-2.5 p-2.5 rounded-xl text-left transition-all cursor-pointer ${
                               isActive
-                                ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-xs font-semibold'
+                                ? 'bg-blue-600 text-white shadow-xs font-semibold'
                                 : 'hover:bg-[var(--bg-surface)] text-[var(--text-primary)]'
                             }`}
                           >
-                            <span className={`mt-0.5 shrink-0 ${isActive ? 'text-white' : 'text-amber-500'}`}>
+                            <span className={`mt-0.5 shrink-0 ${isActive ? 'text-white' : 'text-blue-600 dark:text-blue-400'}`}>
                               {route.icon}
                             </span>
                             <div className="flex-1 min-w-0">
@@ -434,16 +392,16 @@ export const GovMegaMenu: React.FC<GovMegaMenuProps> = ({ isOpen, onClose }) => 
               </div>
 
               {/* Quick Action Shortcuts Bar */}
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
+              <div className="p-4 rounded-2xl bg-slate-100 dark:bg-[#071326] border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
+                  <Landmark className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                   <span>Frequently Executed Manufacturer Workflows:</span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => handleNav('create-batch')}
-                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
                   >
                     <span>+ Mint New Batch</span>
                     <ArrowRight className="w-3 h-3" />

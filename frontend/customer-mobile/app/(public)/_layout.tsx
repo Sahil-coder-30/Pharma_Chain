@@ -5,7 +5,6 @@ export default function PublicLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="home" />
       <Stack.Screen name="scan" />
-      <Stack.Screen name="verification" />
     </Stack>
   );
 }

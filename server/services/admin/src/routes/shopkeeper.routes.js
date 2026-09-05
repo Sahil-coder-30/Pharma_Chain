@@ -5,6 +5,7 @@ import {
     approveShopkeeperController,
     rejectShopkeeperController,
     suspendShopkeeperController,
+    unsuspendShopkeeperController,
 } from '../controllers/shopkeeper.controller.js';
 import { requireAdminAuth } from '../middleware/adminAuth.middleware.js';
 import { requireRoles } from '../middleware/roleCheck.middleware.js';
@@ -27,5 +28,8 @@ router.post('/:id/reject', requireRoles('SUPERADMIN', 'DRUG_INSPECTOR'), rejectS
 
 // POST /api/admin/shopkeepers/:id/suspend
 router.post('/:id/suspend', requireRoles('SUPERADMIN', 'DRUG_INSPECTOR'), suspendShopkeeperController);
+
+// POST /api/admin/shopkeepers/:id/unsuspend
+router.post('/:id/unsuspend', requireRoles('SUPERADMIN', 'DRUG_INSPECTOR'), unsuspendShopkeeperController);
 
 export default router;

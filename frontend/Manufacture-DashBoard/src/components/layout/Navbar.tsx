@@ -14,8 +14,6 @@ import {
   User,
   ChevronDown,
   Clock,
-  Sun,
-  Moon,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -27,8 +25,6 @@ export const Navbar: React.FC = () => {
     setIsSearchOpen,
     setIsHelpOpen,
     navigateTo,
-    theme,
-    toggleThemeMode,
   } = useDashboard();
 
   const { user, kycStatus, logout } = useAuth();
@@ -169,7 +165,7 @@ export const Navbar: React.FC = () => {
                     <div
                       key={alert.id}
                       onClick={() => {
-                        navigateTo('alerts');
+                        navigateTo('recalls');
                         setIsNotifOpen(false);
                       }}
                       className="p-3 hover:bg-[var(--bg-active)] cursor-pointer flex items-start gap-2.5 transition-colors"
@@ -260,23 +256,6 @@ export const Navbar: React.FC = () => {
                 <span>Cryptographic Key Vault</span>
               </button>
 
-              {/* Theme toggle row in dropdown */}
-              <button
-                onClick={() => toggleThemeMode()}
-                className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-[var(--text-primary)] hover:bg-[var(--bg-element)] text-left transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2">
-                  {theme === 'dark' ? (
-                    <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  ) : (
-                    <Moon className="w-3.5 h-3.5 text-slate-700" />
-                  )}
-                  <span>{theme === 'dark' ? 'Light Theme' : 'Dark Theme'}</span>
-                </div>
-                <span className="text-[10px] font-mono font-bold text-[var(--text-muted)] bg-[var(--bg-element)] px-1.5 py-0.5 rounded border border-[var(--border)]">
-                  {theme === 'dark' ? 'DARK' : 'LIGHT'}
-                </span>
-              </button>
 
               {/* Sign out */}
               <div className="pt-1 border-t border-[var(--border)]">

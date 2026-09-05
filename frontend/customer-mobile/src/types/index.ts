@@ -51,6 +51,10 @@ export interface DispensingShop {
   longitude?: string | number | null;
   address?: string | null;
   phone?: string | null;
+  isSold?: boolean;
+  custodyState?: string | null;
+  intakeTime?: string | null;
+  formattedIntakeTime?: string | null;
   sellingDate?: string | null;
   sellingTime?: string | null;
   timestamp?: string | null;
@@ -70,6 +74,8 @@ export interface VerificationResult {
   packHash?: string;
   scannedHash?: string;
   blockchainStatus?: string;
+  custodyState?: string | null;
+  isSold?: boolean;
   detail?: any;
 
   isRecentlySold?: boolean;
@@ -110,8 +116,10 @@ export interface VerificationResult {
 
   transaction?: {
     status: string;
-    saleTime?: string;
-    location?: string;
+    saleTime?: string | null;
+    intakeTime?: string | null;
+    isSold?: boolean;
+    location?: string | null;
   };
 
   risk?: {
@@ -133,12 +141,6 @@ export interface ReportSubmissionResponse {
   status: 'success' | 'error';
   message: string;
   reportId?: string;
-}
-
-export interface User {
-  id: string;
-  firebaseUid: string;
-  role: string;
 }
 
 export type MedicineItemStatus = 'Verified' | 'Needs Attention' | 'Expiring Soon' | 'Suspicious' | 'Expired';

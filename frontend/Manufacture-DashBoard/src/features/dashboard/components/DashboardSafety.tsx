@@ -20,19 +20,19 @@ export const DashboardSafety: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* 1. Active Recall Command Center */}
-      <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-5 sm:p-6 shadow-xs relative overflow-hidden">
+      <div className="glass-card rounded-2xl border border-rose-500/30 bg-gradient-to-r from-rose-500/10 via-[var(--bg-surface)] to-[var(--bg-surface)] dark:from-rose-950/30 p-5 sm:p-6 relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+            <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 shrink-0">
               <AlertOctagon className="w-6 h-6" />
             </div>
 
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-black text-[var(--text-primary)]">
+                <h3 className="text-base font-bold text-[var(--text-primary)]">
                   Active Supply Chain Recalls ({activeRecalls.length})
                 </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-mono">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30">
                   GSR 1337(E) Statutory Isolation
                 </span>
               </div>
@@ -45,7 +45,7 @@ export const DashboardSafety: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setIsRecallModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-600/20 transition-all cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-rose-600/25 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>+ Issue Recall Notice</span>
@@ -53,7 +53,7 @@ export const DashboardSafety: React.FC = () => {
 
             <button
               onClick={() => navigateTo('recalls')}
-              className="px-3.5 py-2 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-element)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-element)] border border-[var(--border)] text-xs font-semibold text-[var(--text-primary)] transition-all cursor-pointer flex items-center gap-1.5"
             >
               <span>Recall Center</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -68,13 +68,13 @@ export const DashboardSafety: React.FC = () => {
               <div
                 key={recall.id}
                 onClick={() => navigateTo('recalls')}
-                className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-rose-500/30 hover:border-rose-500 transition-colors cursor-pointer shadow-xs group"
+                className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-rose-500/30 hover:border-rose-400 transition-colors cursor-pointer group shadow-xs"
               >
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="font-mono font-bold text-rose-600 dark:text-rose-400 group-hover:underline">
                     {recall.batchId}
                   </span>
-                  <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-element)] px-1.5 py-0.2 rounded border border-[var(--border)]">
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-element)] px-1.5 py-0.5 rounded border border-[var(--border)]">
                     {recall.affectedPacks.toLocaleString()} units
                   </span>
                 </div>
@@ -91,14 +91,14 @@ export const DashboardSafety: React.FC = () => {
       </div>
 
       {/* 2. Quality Alerts & Fraud Interception Telemetry */}
-      <div className="bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] p-5 shadow-xs space-y-4">
+      <div className="glass-card rounded-2xl border border-[var(--border)] p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-[var(--bg-element)] text-amber-500 border border-[var(--border)]">
+            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
               <BellRing className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-[var(--text-primary)]">
+              <h3 className="text-sm font-bold text-[var(--text-primary)]">
                 Security & Fraud Interception Telemetry
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
@@ -108,10 +108,10 @@ export const DashboardSafety: React.FC = () => {
           </div>
 
           <button
-            onClick={() => navigateTo('alerts')}
-            className="text-xs font-bold text-amber-500 hover:text-amber-400 flex items-center gap-1 cursor-pointer transition-colors"
+            onClick={() => navigateTo('recalls')}
+            className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 flex items-center gap-1 cursor-pointer transition-colors"
           >
-            <span>View All Alerts ({alerts.length})</span>
+            <span>Recall & Safety Center</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -136,10 +136,10 @@ export const DashboardSafety: React.FC = () => {
                   <div
                     className={`p-2 rounded-xl shrink-0 mt-0.5 ${
                       isCritical
-                        ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                         : isWarning
-                        ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
-                        : 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                     }`}
                   >
                     {isCritical ? (
@@ -171,12 +171,12 @@ export const DashboardSafety: React.FC = () => {
                   {!alert.resolved ? (
                     <button
                       onClick={() => resolveAlert(alert.id)}
-                      className="px-3 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-element)] text-xs font-bold text-[var(--text-primary)] border border-[var(--border)] transition-colors cursor-pointer shadow-xs"
+                      className="px-3 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-element)] text-xs font-semibold text-[var(--text-primary)] border border-[var(--border)] transition-colors cursor-pointer"
                     >
                       Acknowledge
                     </button>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                       <Check className="w-3.5 h-3.5" /> Resolved
                     </span>
                   )}

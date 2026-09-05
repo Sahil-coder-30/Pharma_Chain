@@ -5,7 +5,13 @@ import morgan from 'morgan';
 import authRouter from '../routes/auth.routes.js';
 import batchRouter from '../routes/batch.routes.js';
 import internalRouter from '../routes/internal.routes.js';
-import { getManufacturerPublicKeyController } from '../controllers/auth.controller.js';
+import {
+    getManufacturerPublicKeyController,
+    getAllPublicKeysController,
+} from '../controllers/auth.controller.js';
+import { initIST } from '../utils/time.js';
+
+initIST();
 
 const app = express();
 
@@ -15,6 +21,7 @@ app.use(cookieParser());
 app.use(morgan('dev'));
 
 // ── Routes ────────────────────────────────────────────────────────────────────
+app.get('/api/manufacturer/public/keys/all', getAllPublicKeysController);
 app.get('/api/manufacturer/public/key/:id', getManufacturerPublicKeyController);
 app.use('/api/manufacturer/auth', authRouter);
 app.use('/api/manufacturer/batch', batchRouter);

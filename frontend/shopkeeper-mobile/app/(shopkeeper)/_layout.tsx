@@ -24,26 +24,26 @@ export default function ShopkeeperLayout() {
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
           position: 'absolute',
-          bottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 14) : 16,
+          bottom: Math.max(insets.bottom, Platform.OS === 'ios' ? 14 : 14),
           left: 16,
           right: 16,
           elevation: 10,
           backgroundColor: '#ffffff',
           borderRadius: 28,
-          height: 68,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: 64,
+          paddingBottom: 6,
+          paddingTop: 6,
           borderWidth: 1,
           borderColor: 'rgba(226, 232, 240, 0.95)',
           shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.12,
-          shadowRadius: 22,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.1,
+          shadowRadius: 18,
         },
         tabBarLabelStyle: {
           fontSize: 10.5,
           fontWeight: '700',
-          marginTop: 2,
+          marginTop: 1,
         },
       }}
     >
@@ -60,11 +60,11 @@ export default function ShopkeeperLayout() {
         }}
       />
 
-      {/* 2. Stock Vault */}
+      {/* 2. Inventory */}
       <Tabs.Screen
         name="inventory"
         options={{
-          title: 'Stock Vault',
+          title: 'Inventory',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIconWrapper, focused && styles.tabIconWrapperActive]}>
               <Boxes size={20} color={color} strokeWidth={focused ? 2.4 : 1.8} />
@@ -77,19 +77,8 @@ export default function ShopkeeperLayout() {
       <Tabs.Screen
         name="scan"
         options={{
-          title: 'Scan POS',
-          tabBarLabel: ({ focused }) => (
-            <Text
-              style={{
-                fontSize: 10.5,
-                fontWeight: '800',
-                color: focused ? PharmaTheme.colors.primary : '#64748b',
-                marginTop: 18,
-              }}
-            >
-              Scan POS
-            </Text>
-          ),
+          title: 'Scan',
+          tabBarLabel: () => null,
           tabBarIcon: ({ focused }) => (
             <View style={styles.centerScanOuterRing}>
               <View style={[styles.centerScanBtn, focused && styles.centerScanBtnActive]}>
@@ -113,11 +102,11 @@ export default function ShopkeeperLayout() {
         }}
       />
 
-      {/* 5. Terminal Profile */}
+      {/* 5. Store */}
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Store ID',
+          title: 'Store',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.tabIconWrapper, focused && styles.tabIconWrapperActive]}>
               <Store size={20} color={color} strokeWidth={focused ? 2.4 : 1.8} />
@@ -132,7 +121,7 @@ export default function ShopkeeperLayout() {
 const styles = StyleSheet.create({
   tabIconWrapper: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -142,10 +131,10 @@ const styles = StyleSheet.create({
   },
   centerScanOuterRing: {
     position: 'absolute',
-    top: -24,
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    top: -20,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -154,13 +143,13 @@ const styles = StyleSheet.create({
     shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
-    shadowRadius: 14,
+    shadowRadius: 12,
     elevation: 8,
   },
   centerScanBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: '#2563eb',
     alignItems: 'center',
     justifyContent: 'center',

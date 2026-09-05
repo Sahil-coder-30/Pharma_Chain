@@ -3,6 +3,7 @@ import { verifyToken, getPackStatus, recordIntake, recordSale } from '../service
 import { getPublicBatchMetadata } from '../services/manufacturerClient.service.js';
 import { PackEvent, Inventory } from '../models/inventory.model.js';
 import Shopkeeper from '../models/shopkeeper.model.js';
+import { getISTISOString, formatISTDateTime } from '../utils/time.js';
 
 // ── Intake Scan — POST /api/shopkeeper/scan/intake ────────────────────────────
 export const intakeScanController = async (req, res) => {
@@ -58,7 +59,7 @@ export const intakeScanController = async (req, res) => {
         const latitude = req.body.latitude || req.body.gps?.latitude || '28.6139';
         const longitude = req.body.longitude || req.body.gps?.longitude || '77.2090';
         const location = req.body.location || `${latitude}, ${longitude} | ${shopAddress}`;
-        const timestamp = new Date().toISOString();
+        const timestamp = getISTISOString();
 
         // Fabric transition MINTED → AT_SHOP (non-fatal)
         await recordIntake({
@@ -189,7 +190,7 @@ export const saleScanController = async (req, res) => {
         const latitude = req.body.latitude || req.body.gps?.latitude || '28.6139';
         const longitude = req.body.longitude || req.body.gps?.longitude || '77.2090';
         const location = req.body.location || `${latitude}, ${longitude} | ${shopAddress}`;
-        const timestamp = new Date().toISOString();
+        const timestamp = getISTISOString();
 
         // Fabric transition AT_SHOP → SOLD (non-fatal)
         await recordSale({
@@ -380,9 +381,9 @@ export const customerScanController = async (req, res) => {
                 const ds = detail.sellingDate;
                 const ts = detail.sellingTime || '00:00:00';
                 if (/^\d{8}$/.test(ds)) {
-                    soldDate = new Date(`${ds.slice(4, 8)}-${ds.slice(2, 4)}-${ds.slice(0, 2)}T${ts}Z`);
+                    soldDate = new Date(`${ds.slice(4, 8)}-${ds.slice(2, 4)}-${ds.slice(0, 2)}T${ts}+05:30`);
                 } else {
-                    soldDate = new Date(`${ds} ${ts}`);
+                    soldDate = new Date(`${ds} ${ts} GMT+0530`);
                 }
             }
 
@@ -393,6 +394,7 @@ export const customerScanController = async (req, res) => {
 
                 if (dispensingShop) {
                     dispensingShop.formattedSaleTime = soldDate.toLocaleDateString('en-IN', {
+                        timeZone: 'Asia/Kolkata',
                         day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                     });
                     const mins = Math.floor(diffMs / (1000 * 60));

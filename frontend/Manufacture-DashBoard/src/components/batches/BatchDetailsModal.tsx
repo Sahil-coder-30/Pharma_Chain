@@ -6,11 +6,15 @@ import { useToast } from '../../context/ToastContext';
 import { Modal } from '../common/Modal';
 import { StatusBadge } from '../common/StatusBadge';
 import { BatchTimeline } from './BatchTimeline';
+import { retryBlockchainBatchAPI } from '../../features/dashboard/service/dashboard.api';
 import {
   Boxes,
   QrCode,
   Download,
   AlertOctagon,
+  AlertTriangle,
+  RefreshCw,
+  Loader2,
   KeyRound,
   FileCheck,
   CheckCircle2,
@@ -36,6 +40,7 @@ export const BatchDetailsModal: React.FC = () => {
     downloadBatchCsv,
     fetchBatchPreview,
     fetchBatchDetails,
+    mintBatch,
   } = useDashboard();
   const { showToast } = useToast();
 
@@ -73,6 +78,35 @@ export const BatchDetailsModal: React.FC = () => {
       return;
     }
     downloadBatchCsv(selectedBatch.id, 'packs');
+  };
+
+  const [isRetryingBlockchain, setIsRetryingBlockchain] = useState(false);
+
+  const handleRetryBlockchain = async () => {
+    if (!selectedBatch) return;
+    setIsRetryingBlockchain(true);
+    try {
+      const res = await retryBlockchainBatchAPI(selectedBatch.id);
+      showToast({
+        type: 'success',
+        title: 'Blockchain Sync Successful',
+        message: `Batch ${selectedBatch.id} has been committed to Hyperledger Fabric.`,
+      });
+      setSelectedBatch({
+        ...selectedBatch,
+        blockchainStatus: 'COMMITTED',
+        blockchainError: undefined,
+        blockchainRecordedCount: res?.data?.blockchainRecordedCount || selectedBatch.totalQuantity,
+      });
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Blockchain Sync Failed',
+        message: err.message || 'Could not reach Hyperledger Fabric peer/orderer.',
+      });
+    } finally {
+      setIsRetryingBlockchain(false);
+    }
   };
 
   const handleRecallClick = () => {
@@ -127,6 +161,63 @@ export const BatchDetailsModal: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* S3 Failure Banner */}
+        {selectedBatch.mintStatus === 'FAILED' && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-rose-300">
+            <div className="flex items-start gap-2.5">
+              <AlertOctagon className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-rose-200">AWS S3 Minting / Storage Failed</p>
+                <p className="text-[11px] text-rose-300/80 mt-0.5 font-mono break-all">
+                  {selectedBatch.mintError || 'Cryptographic tokens could not be stored in AWS S3. Local disk fallback is disabled.'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => mintBatch(selectedBatch.id)}
+              className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-colors shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Retry S3 Mint</span>
+            </button>
+          </div>
+        )}
+
+        {/* Blockchain Desync / Error Alert Banner */}
+        {selectedBatch.blockchainStatus === 'FAILED' && (
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-amber-400">Blockchain Ledger Sync Failed</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-0.5 font-mono break-all">
+                  {selectedBatch.blockchainError || 'Hyperledger Fabric was unreachable or rejected the transaction.'}
+                </p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                  QR tokens are signed and available in S3, but transitions are not yet committed to Fabric world state.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleRetryBlockchain}
+              disabled={isRetryingBlockchain}
+              className="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isRetryingBlockchain ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Syncing to Fabric...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Retry Blockchain Sync</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex border-b border-[var(--border)] gap-2 text-xs font-semibold overflow-x-auto">
@@ -183,6 +274,42 @@ export const BatchDetailsModal: React.FC = () => {
               <div className="p-3 rounded-xl bg-[var(--bg-element)] border border-[var(--border)]">
                 <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold block">Production Site</span>
                 <span className="font-medium text-[var(--text-primary)] mt-0.5 block truncate">{selectedBatch.productionSite}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 rounded-xl bg-[var(--bg-element)] border border-[var(--border)]">
+                <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold block">Blockchain Ledger</span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`font-bold font-mono text-xs ${
+                    selectedBatch.blockchainStatus === 'COMMITTED'
+                      ? 'text-emerald-400'
+                      : selectedBatch.blockchainStatus === 'FAILED'
+                      ? 'text-rose-400'
+                      : 'text-amber-400'
+                  }`}>
+                    {selectedBatch.blockchainStatus || 'COMMITTED'}
+                  </span>
+                  {selectedBatch.blockchainRecordedCount != null && (
+                    <span className="text-[10px] text-[var(--text-muted)]">
+                      ({selectedBatch.blockchainRecordedCount} on-chain)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[var(--bg-element)] border border-[var(--border)]">
+                <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold block">Ledger Key / Tx</span>
+                <span className="font-medium font-mono text-[11px] text-[var(--text-primary)] mt-0.5 block truncate" title={selectedBatch.txHash || `${selectedBatch.id}:MINTED`}>
+                  {selectedBatch.txHash || `${selectedBatch.id}:MINTED`}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[var(--bg-element)] border border-[var(--border)]">
+                <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold block">S3 Artifact Storage</span>
+                <span className="font-bold text-emerald-400 mt-0.5 block uppercase">
+                  AWS S3 ({selectedBatch.s3Mode || 'aws'})
+                </span>
               </div>
             </div>
 
@@ -243,6 +370,8 @@ export const BatchDetailsModal: React.FC = () => {
               createdAt={selectedBatch.createdAt}
               txHash={selectedBatch.txHash}
               blockNumber={selectedBatch.blockNumber}
+              blockchainStatus={selectedBatch.blockchainStatus}
+              blockchainError={selectedBatch.blockchainError}
             />
           </div>
         )}
@@ -286,6 +415,23 @@ export const BatchDetailsModal: React.FC = () => {
                 <p className="text-[11px] text-[var(--text-muted)]">
                   pharma-core is signing pack nonces with ES256 and submitting genesis records to Fabric.
                 </p>
+              </div>
+            ) : selectedBatch.mintStatus === 'FAILED' ? (
+              <div className="p-6 text-center space-y-3 rounded-xl bg-rose-500/5 border border-rose-500/20">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-rose-500/10 text-rose-400 mb-1">
+                  <AlertOctagon className="w-5 h-5" />
+                </div>
+                <p className="font-semibold text-rose-200">S3 Batch Minting Failed</p>
+                <p className="text-[11px] text-[var(--text-muted)] max-w-md mx-auto">
+                  {selectedBatch.mintError || 'Failed to upload cryptographically signed tokens to AWS S3. Local disk fallback is disabled.'}
+                </p>
+                <button
+                  onClick={() => mintBatch(selectedBatch.id)}
+                  className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs inline-flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Retry Minting to AWS S3</span>
+                </button>
               </div>
             ) : loadingPacks ? (
               <div className="py-6 text-center text-xs text-[var(--text-muted)] animate-pulse">

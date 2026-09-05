@@ -1,6 +1,9 @@
 import 'dotenv/config';
+import { initIST } from './src/utils/time.js';
 import app from './src/app/app.js';
 import { connectToDb } from './src/config/db.js';
+
+initIST();
 
 const PORT = process.env.PORT || 3002;
 

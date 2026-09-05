@@ -176,13 +176,22 @@ export const DashboardOverviewPage: React.FC = () => {
 
           {/* Mini SLA progress indicator */}
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
-              <span>{stats?.manufacturers.total ?? 0} Registered Plants</span>
-              <span className="font-bold text-amber-700 dark:text-amber-400">SLA 24h</span>
-            </div>
-            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-              <div className="bg-amber-500 h-full rounded-full w-3/4" />
-            </div>
+            {(() => {
+              const total = stats?.manufacturers.total ?? 0;
+              const approved = stats?.manufacturers.approved ?? 0;
+              const pct = total > 0 ? Math.round((approved / total) * 100) : 0;
+              return (
+                <>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+                    <span>{approved} of {total} Plants Cleared</span>
+                    <span className="font-bold text-amber-700 dark:text-amber-400 font-mono">{pct}% Approved</span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(5, pct)}%` }} />
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -209,13 +218,22 @@ export const DashboardOverviewPage: React.FC = () => {
 
           {/* Mini SLA progress indicator */}
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
-              <span>{stats?.shopkeepers.total ?? 0} Dispensaries</span>
-              <span className="font-bold text-blue-700 dark:text-blue-400">Form 20/21</span>
-            </div>
-            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-              <div className="bg-blue-600 h-full rounded-full w-2/3" />
-            </div>
+            {(() => {
+              const total = stats?.shopkeepers.total ?? 0;
+              const approved = stats?.shopkeepers.approved ?? 0;
+              const pct = total > 0 ? Math.round((approved / total) * 100) : 0;
+              return (
+                <>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5">
+                    <span>{approved} of {total} Dispensaries Cleared</span>
+                    <span className="font-bold text-blue-700 dark:text-blue-400 font-mono">{pct}% Approved</span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-blue-600 h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(5, pct)}%` }} />
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 

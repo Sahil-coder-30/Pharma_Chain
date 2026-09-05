@@ -4,8 +4,9 @@ import mongoose from 'mongoose';
 // PENDING  → Batch created, awaiting mint trigger
 // MINTING  → pharma-core is signing packs (background job running)
 // MINTED   → All packs signed, blockchain transitions recorded
+// FAILED   → Minting or S3 upload failed (can be retried)
 // RECALLED → Batch recalled across entire supply chain
-export const MINT_STATUS = ['PENDING', 'MINTING', 'MINTED', 'RECALLED'];
+export const MINT_STATUS = ['PENDING', 'MINTING', 'MINTED', 'FAILED', 'RECALLED'];
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 //
@@ -117,8 +118,8 @@ const BatchSchema = new mongoose.Schema(
         // null = local dev mode (no expiry). Used to trigger URL refresh in the dashboard.
         s3UrlExpiresAt: { type: String, default: null },
 
-        // Storage mode reported by pharma-core: "aws" | "local"
-        s3Mode:         { type: String, enum: ['aws', 'local', null], default: null },
+        // Storage mode: "aws" (exclusive AWS S3 persistence)
+        s3Mode:         { type: String, enum: ['aws', 'local', null], default: 'aws' },
 
         // ── Blockchain Ledger Tracking ─────────────────────────────────────────
         // COMMITTED → All transitions recorded on Hyperledger Fabric

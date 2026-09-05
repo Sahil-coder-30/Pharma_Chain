@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Button, ActivityIndicator, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  Platform,
+  StatusBar,
+} from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Camera as CameraIcon, ShieldCheck } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PharmaTheme } from '../src/constants/theme';
 
 export default function PublicScanScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const getCameraPermissions = async () => {
@@ -21,8 +32,8 @@ export default function PublicScanScreen() {
   }, []);
 
   const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
-    if (scanned) return;
-    
+    if (scanned || loading) return;
+
     setScanned(true);
     setLoading(true);
     try {
@@ -36,141 +47,225 @@ export default function PublicScanScreen() {
         setLoading(false);
         setScanned(false);
         router.push({ pathname: '/verification', params: { qrData: data, mode: 'VERIFY' } });
-      }, 800);
-
+      }, 600);
     } catch (error) {
       console.error(error);
-      alert('Failed to verify medicine');
       setLoading(false);
       setScanned(false);
     }
   };
 
   if (hasPermission === null) {
-    return <View style={styles.container}><Text>Requesting camera permission...</Text></View>;
-  }
-  if (hasPermission === false) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>No access to camera</Text>
-        <Button title="Request Permission" onPress={() => Camera.requestCameraPermissionsAsync()} />
+        <ActivityIndicator size="large" color={PharmaTheme.colors.primary} />
+        <Text style={styles.permissionInfoText}>Requesting camera permission...</Text>
+      </View>
+    );
+  }
+
+  if (hasPermission === false) {
+    return (
+      <View style={[styles.container, styles.permissionWrapper]}>
+        <View style={styles.permissionIconCircle}>
+          <CameraIcon size={44} color={PharmaTheme.colors.primary} />
+        </View>
+        <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <Text style={styles.permissionSubtitle}>
+          PharmaChain needs camera permission to scan 2D DataMatrix packaging tokens.
+        </Text>
+        <TouchableOpacity
+          style={styles.permissionBtn}
+          onPress={async () => {
+            const { status } = await Camera.requestCameraPermissionsAsync();
+            setHasPermission(status === 'granted');
+          }}
+          activeOpacity={0.85}
+        >
+          <ShieldCheck size={18} color="#ffffff" />
+          <Text style={styles.permissionBtnText}>Enable Camera</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.backLinkBtn}
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/(auth)/login');
+          }}
+        >
+          <Text style={styles.backLinkText}>Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => {
-          if(router.canGoBack()) router.back();
-          else router.replace('/(auth)/login');
-        }} style={styles.iconButton}>
-          <ArrowLeft color="#ffffff" size={28} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Scan Publicly</Text>
-        <View style={{ width: 28 }} />
-      </View>
-      <View style={styles.container}>
-        <CameraView
-          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-          barcodeScannerSettings={{
-            barcodeTypes: ["qr"],
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Top Header */}
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) + 8 }]}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/(auth)/login');
           }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        
-        <View style={styles.overlay}>
-          <View style={styles.scanArea} />
-          <Text style={styles.instructionText}>
-            Align the medicine QR code within the frame
-          </Text>
-        </View>
-
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#ffffff" />
-            <Text style={styles.loadingText}>Verifying Authenticity...</Text>
-          </View>
-        )}
+          style={styles.iconButton}
+          activeOpacity={0.8}
+        >
+          <ArrowLeft color="#ffffff" size={22} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Public Verification Scan</Text>
+        <View style={{ width: 36 }} />
       </View>
-    </SafeAreaView>
+
+      <CameraView
+        onBarcodeScanned={scanned || loading ? undefined : handleBarCodeScanned}
+        barcodeScannerSettings={{
+          barcodeTypes: ['qr', 'datamatrix'],
+        }}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      <View style={styles.overlay}>
+        <View style={styles.scanArea} />
+        <Text style={styles.instructionText}>
+          Align 2D DataMatrix or QR code within the frame
+        </Text>
+      </View>
+
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ffffff" />
+          <Text style={styles.loadingText}>Verifying Authenticity on Ledger...</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#000',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 16,
     position: 'absolute',
-    top: Platform.OS === 'android' ? StatusBar.currentHeight : 40,
+    top: 0,
     left: 0,
     right: 0,
     zIndex: 10,
   },
   iconButton: {
-    padding: 4,
+    width: 38,
+    height: 38,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 20,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#ffffff',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   scanArea: {
     width: 250,
     height: 250,
-    borderWidth: 2,
-    borderColor: '#3b82f6',
+    borderWidth: 2.5,
+    borderColor: PharmaTheme.colors.primary,
     backgroundColor: 'transparent',
-    borderRadius: 16,
-    marginBottom: 20,
+    borderRadius: 20,
+    marginBottom: 24,
   },
   instructionText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 36,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingVertical: 8,
+    borderRadius: 999,
   },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 18,
+  permissionWrapper: {
+    padding: 32,
+  },
+  permissionIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 20,
+  },
+  permissionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 10,
     textAlign: 'center',
+  },
+  permissionSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 28,
+    maxWidth: 300,
+  },
+  permissionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: PharmaTheme.colors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 999,
+    marginBottom: 14,
+  },
+  permissionBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  backLinkBtn: {
+    paddingVertical: 10,
+  },
+  backLinkText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  permissionInfoText: {
+    color: '#ffffff',
+    marginTop: 16,
+    fontSize: 14,
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.75)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
     color: '#ffffff',
     marginTop: 16,
-    fontSize: 16,
-    fontWeight: '600',
-  }
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });

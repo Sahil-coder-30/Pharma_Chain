@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { signCoreJwt } from './crypto.service.js';
+import { getISTDateString, getISTTimeString } from '../utils/time.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -133,8 +134,8 @@ export const submitTransitionBatch = async (batchId, transitions) => {
  */
 export const submitRecall = async ({ systemBatchId, actorId, reason }) => {
     const now         = new Date();
-    const recallDate  = now.toISOString().split('T')[0];            // YYYY-MM-DD
-    const recallTime  = now.toTimeString().split(' ')[0];           // HH:MM:SS
+    const recallDate  = getISTDateString(now);            // YYYY-MM-DD in IST
+    const recallTime  = getISTTimeString(now);            // HH:MM:SS in IST
 
     try {
         const payload = { systemBatchId, actorId, reason, recallDate, recallTime };

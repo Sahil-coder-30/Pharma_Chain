@@ -2,6 +2,28 @@ import { consumerApiClient, apiClient } from './client';
 import { VerificationResult, BackendUIState, VerificationStatus } from '../../types';
 
 /**
+ * Formats ISO or arbitrary date-time timestamps into a human-friendly string.
+ * Example: "2026-09-05T17:11:09.304Z" -> "05 Sep 2026, 05:11 PM"
+ */
+export const formatDisplayDateTime = (input?: string | number | Date | null): string | null => {
+  if (!input) return null;
+  try {
+    const d = new Date(input);
+    if (isNaN(d.getTime())) return String(input);
+    return d.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return String(input);
+  }
+};
+
+/**
  * Maps the 7 backend UI states to the application's VerificationStatus.
  */
 export const mapBackendUIStateToStatus = (uiState: BackendUIState): VerificationStatus => {
@@ -78,6 +100,19 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
     const expiryDate = med.expiryDate || batch.expiryDate || payload.expiryDate || 'N/A';
     const manufacturingDate = med.manufacturingDate || batch.manufacturingDate || payload.mfgDate || payload.manufacturingDate || (hasValidPayload ? '2026-08-01' : 'N/A');
 
+    const isSold = Boolean(data.isSold ?? (uiState === 'PURCHASED_RECENTLY' || uiState === 'ALREADY_SOLD'));
+    const isAtShop = Boolean(uiState === 'AT_SHOP' || data.custodyState === 'AT_SHOP' || (!isSold && (data.dispensingShop?.name || data.detail?.shopName)));
+
+    const formattedSaleTime = isSold
+      ? (data.dispensingShop?.formattedSaleTime || formatDisplayDateTime(data.dispensingShop?.timestamp || data.detail?.timestamp))
+      : null;
+
+    const formattedIntakeTime = (isAtShop || data.dispensingShop?.intakeTime || data.detail?.timestamp)
+      ? (data.dispensingShop?.formattedIntakeTime || formatDisplayDateTime(data.dispensingShop?.intakeTime || data.dispensingShop?.timestamp || data.detail?.timestamp))
+      : null;
+
+    const blockchainStatus = data.blockchainStatus || (isSold ? 'SOLD' : isAtShop ? 'AT_SHOP' : uiState);
+
     return {
       success: isValid,
       status,
@@ -86,7 +121,9 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
       valid: data.valid,
       packHash: data.packHash,
       scannedHash: data.scannedHash,
-      blockchainStatus: data.blockchainStatus || uiState,
+      blockchainStatus,
+      custodyState: isSold ? 'SOLD' : isAtShop ? 'AT_SHOP' : 'MINTED',
+      isSold,
       detail: data.detail,
       payload,
       pack: {
@@ -110,9 +147,17 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
         licenseNumber: med.mfgLicenseNumber || batch.manufacturingLicenseNo || null,
       },
       isRecentlySold: data.isRecentlySold ?? (uiState === 'PURCHASED_RECENTLY'),
-      hoursSinceSale: data.hoursSinceSale ?? null,
-      daysSinceSale: data.daysSinceSale ?? null,
-      dispensingShop: data.dispensingShop || (data.detail ? {
+      hoursSinceSale: isSold ? (data.hoursSinceSale ?? null) : null,
+      daysSinceSale: isSold ? (data.daysSinceSale ?? null) : null,
+      dispensingShop: data.dispensingShop ? {
+        ...data.dispensingShop,
+        isSold,
+        custodyState: isSold ? 'SOLD' : isAtShop ? 'AT_SHOP' : 'MINTED',
+        intakeTime: data.dispensingShop.intakeTime || data.dispensingShop.timestamp || null,
+        formattedIntakeTime,
+        formattedSaleTime,
+        relativeSaleTime: isSold ? (data.dispensingShop.relativeSaleTime || null) : null,
+      } : (data.detail ? {
         shopId: data.detail.sellerId || null,
         name: data.detail.shopName || null,
         licenseNumber: data.detail.licenseNumber || null,
@@ -121,11 +166,12 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
         longitude: data.detail.longitude || null,
         address: data.detail.address || null,
         phone: data.detail.phone || null,
-        sellingDate: data.detail.sellingDate || null,
-        sellingTime: data.detail.sellingTime || null,
-        timestamp: data.detail.timestamp || null,
-        formattedSaleTime: data.detail.formattedSaleTime || null,
-        relativeSaleTime: data.detail.relativeSaleTime || null,
+        isSold,
+        custodyState: isSold ? 'SOLD' : isAtShop ? 'AT_SHOP' : 'MINTED',
+        intakeTime: data.detail.timestamp || null,
+        formattedIntakeTime,
+        formattedSaleTime,
+        relativeSaleTime: isSold ? (data.detail.relativeSaleTime || null) : null,
         isRecentSale: uiState === 'PURCHASED_RECENTLY',
       } : null),
       shop: {
@@ -134,8 +180,10 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
         location: data.dispensingShop?.location || data.detail?.location || null,
       },
       transaction: {
-        status: data.blockchainStatus || uiState,
-        saleTime: data.dispensingShop?.formattedSaleTime || data.dispensingShop?.relativeSaleTime || data.dispensingShop?.timestamp || data.detail?.timestamp || (data.dispensingShop?.sellingDate ? `${data.dispensingShop.sellingDate} ${data.dispensingShop.sellingTime || ''}` : null) || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        status: blockchainStatus,
+        isSold,
+        saleTime: formattedSaleTime,
+        intakeTime: formattedIntakeTime,
         location: data.dispensingShop?.location || data.detail?.location || null,
       },
       risk: {
@@ -156,18 +204,36 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
       const status = mapBackendUIStateToStatus(uiState);
       const payload = fbData.payload || {};
 
+      const isSold = Boolean(fbData.isSold ?? (uiState === 'PURCHASED_RECENTLY' || uiState === 'ALREADY_SOLD'));
+      const isAtShop = Boolean(uiState === 'AT_SHOP' || fbData.ledgerStatus === 'AtShop' || fbData.ledgerStatus === 'AT_SHOP');
+      const formattedSaleTime = isSold
+        ? (fbData.dispensingShop?.formattedSaleTime || formatDisplayDateTime(fbData.dispensingShop?.timestamp))
+        : null;
+      const formattedIntakeTime = isAtShop
+        ? (fbData.dispensingShop?.formattedIntakeTime || formatDisplayDateTime(fbData.dispensingShop?.timestamp))
+        : null;
+
+      const blockchainStatus = fbData.ledgerStatus || (isSold ? 'SOLD' : isAtShop ? 'AT_SHOP' : uiState);
+
       return {
         success: fbData.valid !== false,
         status,
         uiState,
+        isSold,
+        custodyState: isSold ? 'SOLD' : isAtShop ? 'AT_SHOP' : 'MINTED',
+        blockchainStatus,
         isRecentlySold: fbData.isRecentlySold ?? (uiState === 'PURCHASED_RECENTLY'),
-        hoursSinceSale: fbData.hoursSinceSale ?? null,
-        daysSinceSale: fbData.daysSinceSale ?? null,
-        dispensingShop: fbData.dispensingShop || null,
+        hoursSinceSale: isSold ? (fbData.hoursSinceSale ?? null) : null,
+        daysSinceSale: isSold ? (fbData.daysSinceSale ?? null) : null,
+        dispensingShop: fbData.dispensingShop ? {
+          ...fbData.dispensingShop,
+          isSold,
+          formattedSaleTime,
+          formattedIntakeTime,
+        } : null,
         message: fbData.message || (fbData.valid ? 'Verification complete' : 'Verification failed'),
         valid: fbData.valid,
         packHash: fbData.packHash,
-        blockchainStatus: fbData.ledgerStatus || uiState,
         payload,
         pack: {
           packId: fbData.packHash || payload.serial || 'PACK-SERIAL',
@@ -186,8 +252,10 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
           location: fbData.dispensingShop?.location || null,
         },
         transaction: {
-          status: fbData.ledgerStatus || uiState,
-          saleTime: fbData.dispensingShop?.formattedSaleTime || fbData.dispensingShop?.relativeSaleTime || null,
+          status: blockchainStatus,
+          isSold,
+          saleTime: formattedSaleTime,
+          intakeTime: formattedIntakeTime,
           location: fbData.dispensingShop?.location || null,
         },
         risk: {

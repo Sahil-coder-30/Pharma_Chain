@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import axios from 'axios';
+import { getISTDateString } from './time.js';
 
 const MONGO_URI = 'mongodb+srv://sahilsharma3043_db_user:ztH8xdKhwycWwD3o@cluster0.wv6khhi.mongodb.net/manufacturer';
 const PHARMA_CORE_URL = process.env.PHARMA_CORE_URL || 'http://pharma-core-service:80';
@@ -43,7 +44,7 @@ async function mintAllPending() {
         });
       } catch (kErr) {}
 
-      const expiryStr = (b.expiryDate ? new Date(b.expiryDate).toISOString() : new Date().toISOString()).split('T')[0];
+      const expiryStr = getISTDateString(b.expiryDate || new Date());
       const qtyToMint = Math.min(b.totalQuantity || 200, 1000);
       const res = await axios.post(`${PHARMA_CORE_URL}/core/batch/mint`, {
         batchId: b.batchId,

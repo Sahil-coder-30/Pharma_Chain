@@ -20,30 +20,29 @@ $color-border:        var(--border);
 $color-border-strong: var(--border-strong);
 $color-border-glow:   var(--border-glow);
 
-/* Warm Vibrant Yellow-Red Brand Palette */
-$gov-gold:            var(--gov-gold, #F59E0B);
-$gov-amber:           var(--gov-amber, #D97706);
-$gov-crimson:         var(--gov-crimson, #E11D48);
-$gov-red:             var(--gov-red, #DC2626);
-$color-primary:       var(--brand-primary, #F59E0B);
-$color-primary-hover: var(--brand-hover, #D97706);
-$color-primary-glow:  var(--brand-subtle, rgba(245, 158, 11, 0.15));
-$color-accent:        var(--accent-primary, #E11D48);
-$color-accent-hover:  var(--accent-hover, #F43F5E);
+/* Sovereign Ledger Palette (Electric Cyan & Luminous Emerald) */
+$gov-cyan:            var(--brand-primary, #06B6D4);
+$gov-emerald:         var(--brand-secondary, #10B981);
+$gov-amber:           var(--brand-amber, #F59E0B);
+$gov-rose:            var(--brand-rose, #F43F5E);
+$color-primary:       var(--brand-primary, #06B6D4);
+$color-primary-hover: var(--brand-hover, #38BDF8);
+$color-primary-glow:  var(--brand-subtle, rgba(6, 182, 212, 0.16));
+$color-accent:        var(--brand-secondary, #10B981);
+$color-accent-hover:  var(--brand-secondary-hover, #34D399);
 
 $color-text:          var(--text-primary);
 $color-text-muted:    var(--text-secondary);
 $color-text-dim:      var(--text-muted);
 $color-text-disabled: var(--text-disabled);
 
-$font-sans:           var(--font-sans, 'Inter', system-ui, -apple-system, sans-serif);
+$font-sans:           var(--font-sans, 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif);
 $font-mono:           var(--font-mono, 'JetBrains Mono', monospace);
-
 
 // RGB opacity helper variables
 $color-rgb-text:      var(--color-rgb-text);
-$color-bg-card:       rgba(var(--color-rgb-text), 0.03);
-$color-bg-card-hover: rgba(var(--color-rgb-text), 0.06);
+$color-bg-card:       rgba(19, 29, 49, 0.75);
+$color-bg-card-hover: rgba(23, 35, 59, 0.85);
 
 /* ─── Layout Mixins & UI Patterns ─────────────────────────────────── */
 @mixin flex-center {
@@ -66,26 +65,27 @@ $color-bg-card-hover: rgba(var(--color-rgb-text), 0.06);
   }
 }
 
-// Monochromatic High-Fidelity Container Card
+// Sovereign Ledger Glassmorphic Card
 @mixin card {
-  background: var(--bg-surface);
+  background: var(--bg-overlay);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: $space-6;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.3);
 
   &:hover {
-    background: var(--bg-overlay);
     border-color: var(--border-strong);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.45), 0 0 16px -4px rgba(6, 182, 212, 0.15);
   }
 }
 
 // Shimmer Skeleton Loader
 @mixin skeleton {
-  background: linear-gradient(90deg, $color-bg-card 25%, var(--bg-element) 50%, $color-bg-card 75%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
   border-radius: 6px;

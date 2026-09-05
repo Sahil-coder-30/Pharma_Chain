@@ -14,12 +14,24 @@ import {
   downloadBatchCsvAPI,
   updateOrderStatusAPI,
   resolveAlertAPI,
+  updateBatchAPI,
+  deleteBatchAPI,
+  verifyPackStatusAPI,
 } from '../service/dashboard.api';
+import {
+  getCachedPage,
+  setCachedPage,
+  invalidateBatchCache,
+  getBatchCacheMeta,
+  clearAllBatchCache,
+} from '../service/batchCache.service';
 import {
   setDashboardData,
   setDashboardLoading,
   setDashboardError,
   addBatch,
+  updateBatch,
+  removeBatch,
   addRecall,
   updateOrderStatus,
   resolveAlert,
@@ -125,8 +137,9 @@ export const useDashboard = () => {
         const parsed = parseApiError(err, 'Failed to trigger batch minting.');
         showToast({
           type: 'error',
-          title: 'Minting Failed',
+          title: parsed.isS3Error ? 'AWS S3 Storage Failure' : 'Minting Failed',
           message: parsed.message,
+          duration: 8000,
         });
         throw new Error(parsed.message);
       }
@@ -143,7 +156,29 @@ export const useDashboard = () => {
 
   const fetchBatchPreview = useCallback(
     async (batchId: string, page = 1, limit = 50, search = '') => {
-      return await getBatchPreviewAPI(batchId, page, limit, search);
+      // ── Cache-first: serve from localStorage, skip S3 round-trip ──
+      const cached = getCachedPage(batchId, page, limit, search);
+      if (cached) {
+        return {
+          packs: cached.packs,
+          totalPacks: cached.totalPacks,
+          totalPages: cached.totalPages,
+          currentPage: cached.currentPage,
+          _fromCache: true,
+        };
+      }
+
+      // ── Cache miss: fetch from S3 via API, then persist locally ──
+      const result = await getBatchPreviewAPI(batchId, page, limit, search);
+      if (result?.packs) {
+        setCachedPage(batchId, page, limit, search, {
+          packs: result.packs,
+          totalPacks: result.totalPacks ?? result.packs.length,
+          totalPages: result.totalPages ?? 1,
+          currentPage: result.currentPage ?? page,
+        });
+      }
+      return result;
     },
     []
   );
@@ -154,6 +189,8 @@ export const useDashboard = () => {
         dispatch(setDashboardLoading(true));
         const recallRecord = await initiateRecallAPI({ batchId, reason, severity });
         dispatch(addRecall(recallRecord));
+        // Batch status changed — invalidate all cached pages for this batch
+        invalidateBatchCache(batchId);
         showToast({
           type: 'error',
           title: 'Batch Recall Broadcasted',
@@ -219,20 +256,13 @@ export const useDashboard = () => {
   );
 
   const toggleThemeMode = useCallback(
-    (targetTheme?: 'dark' | 'light') => {
-      const nextTheme = targetTheme || (state.theme === 'dark' ? 'light' : 'dark');
-      dispatch(setTheme(nextTheme));
-      if (nextTheme === 'light') {
-        document.documentElement.classList.add('light-theme');
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-      } else {
-        document.documentElement.classList.remove('light-theme');
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('theme', 'dark');
-      }
+    () => {
+      dispatch(setTheme('light'));
+      document.documentElement.classList.add('light-theme');
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
     },
-    [dispatch, state.theme]
+    [dispatch]
   );
 
   const navigateTo = useCallback(
@@ -243,8 +273,88 @@ export const useDashboard = () => {
     [dispatch]
   );
 
+  const updateBatchData = useCallback(
+    async (batchId: string, updates: Partial<Batch>) => {
+      try {
+        dispatch(setDashboardLoading(true));
+        const updated = await updateBatchAPI(batchId, updates);
+        dispatch(updateBatch(updated));
+        // Metadata changed — invalidate cached pack pages so next load re-fetches
+        invalidateBatchCache(batchId);
+        showToast({
+          type: 'success',
+          title: 'Batch Metadata Updated',
+          message: `Batch ${batchId} QA & operational specifications have been updated.`,
+        });
+        return updated;
+      } catch (err: any) {
+        const parsed = parseApiError(err, 'Failed to update batch metadata.');
+        showToast({
+          type: 'error',
+          title: 'Update Failed',
+          message: parsed.message,
+        });
+        throw new Error(parsed.message);
+      } finally {
+        dispatch(setDashboardLoading(false));
+      }
+    },
+    [dispatch, showToast]
+  );
+
+  const deleteBatchData = useCallback(
+    async (batchId: string) => {
+      try {
+        dispatch(setDashboardLoading(true));
+        const res = await deleteBatchAPI(batchId);
+        dispatch(removeBatch(batchId));
+        // Batch deleted — purge all its cached pages immediately
+        invalidateBatchCache(batchId);
+        showToast({
+          type: 'success',
+          title: 'Batch Deleted',
+          message: res.message,
+        });
+        navigateTo('batches');
+        return res;
+      } catch (err: any) {
+        const parsed = parseApiError(err, 'Failed to delete batch.');
+        showToast({
+          type: 'error',
+          title: 'Deletion Blocked',
+          message: parsed.message,
+          duration: 8000,
+        });
+        throw new Error(parsed.message);
+      } finally {
+        dispatch(setDashboardLoading(false));
+      }
+    },
+    [dispatch, showToast, navigateTo]
+  );
+
+  const verifyPackStatus = useCallback(
+    async (batchId: string, payload: { signedToken?: string; packHash?: string; serialNumber?: string }) => {
+      try {
+        return await verifyPackStatusAPI(batchId, payload);
+      } catch (err: any) {
+        const parsed = parseApiError(err, 'Pack status verification failed.');
+        showToast({
+          type: 'warning',
+          title: 'Verification Incomplete',
+          message: parsed.message,
+        });
+        throw new Error(parsed.message);
+      }
+    },
+    [showToast]
+  );
+
   return {
     ...state,
+    updateBatch: updateBatchData,
+    deleteBatch: deleteBatchData,
+    verifyPackStatus,
     loadDashboard,
     loadBatches,
     registerNewBatch,
@@ -253,6 +363,10 @@ export const useDashboard = () => {
     fetchBatchPreview,
     triggerRecall,
     lookupIdentifier,
+    // Cache utilities — exposed for diagnostics or manual invalidation
+    getBatchCacheMeta,
+    invalidateBatchCache,
+    clearAllBatchCache,
     getExportCsvUrl: getBatchExportCsvUrl,
     downloadBatchCsv: useCallback(
       async (batchId: string, type: 'packs' | 'boxes' | 'cartons' = 'packs') => {
@@ -271,10 +385,10 @@ export const useDashboard = () => {
         } catch (err: any) {
           const parsed = parseApiError(err, 'Failed to download batch CSV manifest.');
           showToast({
-            type: 'warning',
-            title: 'Export Unavailable',
+            type: 'error',
+            title: parsed.isS3Error ? 'AWS S3 Export Unavailable' : 'Export Unavailable',
             message: parsed.message,
-            duration: 6000,
+            duration: 8000,
           });
         }
       },

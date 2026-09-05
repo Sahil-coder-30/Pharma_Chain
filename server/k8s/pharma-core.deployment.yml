@@ -43,6 +43,8 @@ spec:
         - containerPort: 4000
           name: core-http
         env:
+        - name: TZ
+          value: "Asia/Kolkata"
         - name: PORT
           value: "4000"
         - name: NODE_ENV
@@ -52,6 +54,8 @@ spec:
             secretKeyRef:
               name: backend-secret
               key: PHARMA_BACKEND_URL
+        - name: MANUFACTURER_SERVICE_URL
+          value: "http://manufacturer-service:80"
         - name: KEYSTORE_PATH
           value: "/data/keystore.json"
         - name: SERVICE_SECRET

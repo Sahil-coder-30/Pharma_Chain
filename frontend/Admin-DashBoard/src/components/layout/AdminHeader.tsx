@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useAdminData } from '../../context/AdminDataContext';
 import { useTheme } from '../../context/ThemeContext';
-import { USE_MOCKS } from '../../services/api';
 import {
   Bell,
   UserCheck,
@@ -17,10 +16,15 @@ import {
   Cpu,
   KeyRound,
   ExternalLink,
+  Menu,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export const AdminHeader: React.FC = () => {
+interface AdminHeaderProps {
+  onToggleMobileSidebar?: () => void;
+}
+
+export const AdminHeader: React.FC<AdminHeaderProps> = ({ onToggleMobileSidebar }) => {
   const { user, logout } = useAuth();
   const { stats, refreshData, isLoading } = useAdminData();
   const { theme, toggleTheme } = useTheme();
@@ -64,29 +68,33 @@ export const AdminHeader: React.FC = () => {
       </div>
 
       {/* Main Command Bar */}
-      <div className="h-16 bg-white dark:bg-[#081326] backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800/90 px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-colors duration-200">
-        {/* Left: Node Identity & Sync Controls */}
-        <div className="flex items-center gap-2.5 sm:gap-3.5">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-xs shadow-sm">
-            <div className="relative flex h-2.5 w-2.5">
+      <div className="h-16 bg-white dark:bg-[#081326] backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800/90 px-3 sm:px-6 lg:px-8 flex items-center justify-between transition-colors duration-200">
+        {/* Left: Hamburger (Mobile) + Node Identity & Sync Controls */}
+        <div className="flex items-center gap-2 sm:gap-3.5">
+          {onToggleMobileSidebar && (
+            <button
+              onClick={onToggleMobileSidebar}
+              className="lg:hidden p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all border border-slate-200 dark:border-slate-700/80 shadow-xs"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-xs shadow-xs">
+            <div className="relative flex h-2.5 w-2.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </div>
-            <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px] sm:text-xs tracking-wide font-mono">
+            <span className="font-bold text-slate-800 dark:text-slate-200 text-[10px] sm:text-xs tracking-wide font-mono truncate max-w-[150px] sm:max-w-none">
               CDSCO GATEWAY CONNECTED
             </span>
           </div>
 
-          {USE_MOCKS && (
-            <span className="hidden md:inline-flex text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-              Mock Fixtures
-            </span>
-          )}
-
           <button
             onClick={refreshData}
             disabled={isLoading}
-            className="p-2 text-slate-500 hover:text-blue-700 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-95 border border-slate-200/80 dark:border-slate-700/80 shadow-sm"
+            className="p-2 text-slate-500 hover:text-blue-700 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-95 border border-slate-200/80 dark:border-slate-700/80 shadow-xs"
             title="Refresh All Queues"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
@@ -94,16 +102,16 @@ export const AdminHeader: React.FC = () => {
         </div>
 
         {/* Right: Urgent Alerts & Corner Officer Menu Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Urgent Action Alert Trigger */}
           <button
             onClick={() => navigate('/manufacturers')}
-            className="relative p-2.5 text-slate-600 dark:text-slate-300 hover:text-blue-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all border border-slate-200/80 dark:border-slate-700/80 shadow-sm"
+            className="relative p-2.5 text-slate-600 dark:text-slate-300 hover:text-blue-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all border border-slate-200/80 dark:border-slate-700/80 shadow-xs"
             title={`${totalUrgent} items pending inspection`}
           >
             <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             {totalUrgent > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-[#081326] shadow-md animate-pulse">
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-600 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-[#081326] shadow-xs">
                 {totalUrgent}
               </span>
             )}

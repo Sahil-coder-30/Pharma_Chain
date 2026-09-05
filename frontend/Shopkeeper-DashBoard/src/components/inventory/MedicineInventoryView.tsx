@@ -49,10 +49,42 @@ export const MedicineInventoryView: React.FC = () => {
   });
 
   const handleExportCSV = () => {
+    if (filteredInventory.length === 0) {
+      showToast({
+        type: 'warning',
+        title: 'No Data to Export',
+        message: 'There are no inventory records to export.',
+      });
+      return;
+    }
+
+    const headers = ['SKU', 'Medicine Name', 'Generic Name', 'Batch ID', 'Manufacturer', 'Stock', 'Unit MRP', 'Expiry Date', 'Status'];
+    const rows = filteredInventory.map((i) => [
+      `"${i.sku || ''}"`,
+      `"${(i.medicineName || '').replace(/"/g, '""')}"`,
+      `"${(i.genericName || '').replace(/"/g, '""')}"`,
+      `"${i.batchId || ''}"`,
+      `"${(i.manufacturerName || '').replace(/"/g, '""')}"`,
+      i.packCount,
+      i.unitMrp,
+      i.expiryDate,
+      i.status,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    const istDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+    link.setAttribute('download', `Pharmacy_Inventory_${istDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
     showToast({
       type: 'success',
       title: 'Inventory Exported',
-      message: 'Retail_Pharmacy_Stock_Manifest.csv generated.',
+      message: 'Retail pharmacy stock CSV manifest downloaded successfully.',
     });
   };
 

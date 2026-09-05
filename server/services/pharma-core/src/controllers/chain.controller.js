@@ -1,14 +1,9 @@
 import { submitTransition, submitRecall } from '../services/backendClient.service.js';
+import { getISTISOString, getISTDateCompact, getISTTimeString } from '../utils/time.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const formatDate = (d = new Date()) => {
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    return `${dd}${mm}${yyyy}`;
-};
-
-const formatTime = (d = new Date()) => d.toTimeString().split(' ')[0];
+const formatDate = (d = new Date()) => getISTDateCompact(d);
+const formatTime = (d = new Date()) => getISTTimeString(d);
 
 // ── Controllers ───────────────────────────────────────────────────────────────
 
@@ -38,7 +33,7 @@ export const chainIntakeController = async (req, res) => {
             location: location || '',
             latitude: latitude ? String(latitude) : '',
             longitude: longitude ? String(longitude) : '',
-            timestamp: timestamp || now.toISOString(),
+            timestamp: timestamp || getISTISOString(now),
         };
 
         // ── Submit transition to pharma-backend with RS256 Bearer JWT ─────────
@@ -96,7 +91,7 @@ export const chainSaleController = async (req, res) => {
             location: location || '',
             latitude: latitude ? String(latitude) : '',
             longitude: longitude ? String(longitude) : '',
-            timestamp: timestamp || now.toISOString(),
+            timestamp: timestamp || getISTISOString(now),
         };
 
         // ── Submit transition to pharma-backend with RS256 Bearer JWT ─────────

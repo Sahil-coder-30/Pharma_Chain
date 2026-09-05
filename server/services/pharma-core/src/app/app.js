@@ -12,6 +12,10 @@ import { getCorePrivateKey, getCorePublicKey } from '../config/keys.js';
 import { localExportDownloadController, exportPreviewController } from '../controllers/export.controller.js';
 import requireAuth from '../middleware/requireAuth.middleware.js';
 
+import { getISTISOString, initIST } from '../utils/time.js';
+
+initIST();
+
 const app = express();
 
 // ── Core Middleware ───────────────────────────────────────────────────────────
@@ -60,7 +64,7 @@ app.get('/core/health', (_req, res) => {
         service:      'pharma-core',
         rsaKeyReady,
         keystoreReady,
-        timestamp:    new Date().toISOString(),
+        timestamp:    getISTISOString(),
     });
 });
 

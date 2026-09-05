@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import Shopkeeper from '../models/shopkeeper.model.js';
+import { setCachedShopkeeperStatus, invalidateShopkeeperStatus } from '../services/redis.service.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const BCRYPT_ROUNDS      = 12;
@@ -173,6 +174,17 @@ export const loginController = async (req, res) => {
         );
 
         console.log(`[shopkeeper-service Auth] Login: ${shopkeeper.shopId} | status: ${shopkeeper.verificationStatus}`);
+
+        // Cache standing in Redis (20-min sliding window)
+        await setCachedShopkeeperStatus(shopkeeper.shopId, {
+            shopId:             shopkeeper.shopId,
+            shopName:           shopkeeper.shop?.name,
+            drugLicenseNumber:  shopkeeper.license?.drugLicenseNumber,
+            verificationStatus: shopkeeper.verificationStatus,
+            rejectionReason:    shopkeeper.rejectionReason,
+            verifiedAt:         shopkeeper.verifiedAt,
+            ownerEmail:         shopkeeper.owner?.email,
+        });
 
         const profile = shopkeeper.toPublicProfile();
 
@@ -398,6 +410,17 @@ export const kycApproveController = async (req, res) => {
         shopkeeper.rejectionReason = null;
         await shopkeeper.save();
 
+        // Update Redis cache immediately
+        await setCachedShopkeeperStatus(shopkeeper.shopId, {
+            shopId:             shopkeeper.shopId,
+            shopName:           shopkeeper.shop?.name,
+            drugLicenseNumber:  shopkeeper.license?.drugLicenseNumber,
+            verificationStatus: 'approved',
+            rejectionReason:    null,
+            verifiedAt:         shopkeeper.verifiedAt,
+            ownerEmail:         shopkeeper.owner?.email,
+        });
+
         console.log(`[shopkeeper-service Auth] KYC approved: ${shopkeeper.shopId}`);
 
         return res.status(200).json({
@@ -445,6 +468,17 @@ export const kycRejectController = async (req, res) => {
         shopkeeper.rejectionReason = reason || 'License verification rejected by regulatory authority.';
         await shopkeeper.save();
 
+        // Update Redis cache immediately
+        await setCachedShopkeeperStatus(shopkeeper.shopId, {
+            shopId:             shopkeeper.shopId,
+            shopName:           shopkeeper.shop?.name,
+            drugLicenseNumber:  shopkeeper.license?.drugLicenseNumber,
+            verificationStatus: 'rejected',
+            rejectionReason:    shopkeeper.rejectionReason,
+            verifiedAt:         shopkeeper.verifiedAt,
+            ownerEmail:         shopkeeper.owner?.email,
+        });
+
         console.log(`[shopkeeper-service Auth] KYC rejected: ${shopkeeper.shopId}`);
 
         return res.status(200).json({
@@ -491,6 +525,17 @@ export const kycSuspendController = async (req, res) => {
         shopkeeper.verificationStatus = 'suspended';
         shopkeeper.rejectionReason = reason || 'License suspended by regulatory authority.';
         await shopkeeper.save();
+
+        // Update Redis cache immediately
+        await setCachedShopkeeperStatus(shopkeeper.shopId, {
+            shopId:             shopkeeper.shopId,
+            shopName:           shopkeeper.shop?.name,
+            drugLicenseNumber:  shopkeeper.license?.drugLicenseNumber,
+            verificationStatus: 'suspended',
+            rejectionReason:    shopkeeper.rejectionReason,
+            verifiedAt:         shopkeeper.verifiedAt,
+            ownerEmail:         shopkeeper.owner?.email,
+        });
 
         console.log(`[shopkeeper-service Auth] KYC suspended: ${shopkeeper.shopId}`);
 
@@ -703,6 +748,7 @@ export const logoutController = async (req, res) => {
             { shopId: req.user.id },
             { $set: { 'authentication.refreshTokenHash': null } },
         );
+        await invalidateShopkeeperStatus(req.user.id);
         res.clearCookie('shop_token', {
             httpOnly: true,
             secure:   process.env.NODE_ENV === 'production',

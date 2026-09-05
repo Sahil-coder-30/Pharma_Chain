@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDashboard } from '../../features/dashboard/Hooks/dashboard.hooks';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
@@ -19,6 +19,7 @@ import { ToastContainer } from '../common/Toast';
 
 export const Layout: React.FC = () => {
   const { activeRoute } = useDashboard();
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
 
   const renderActiveView = () => {
     switch (activeRoute) {
@@ -45,14 +46,17 @@ export const Layout: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] overflow-hidden font-sans selection:bg-emerald-500 selection:text-white">
-      {/* 1. Navigation Sidebar */}
-      <Sidebar />
+      {/* 1. Navigation Sidebar (Desktop + Mobile Drawer) */}
+      <Sidebar
+        isMobileOpen={isMobileNavOpen}
+        onMobileClose={() => setIsMobileNavOpen(false)}
+      />
 
       {/* 2. Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Navbar />
+        <Navbar onToggleMobileMenu={() => setIsMobileNavOpen((prev: boolean) => !prev)} />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">{renderActiveView()}</div>
         </main>
       </div>

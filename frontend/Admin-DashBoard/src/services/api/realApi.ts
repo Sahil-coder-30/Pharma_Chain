@@ -227,6 +227,28 @@ export const realApi = {
     };
   },
 
+  async unsuspendShopkeeper(
+    id: string,
+    _adminUser?: AdminUser,
+    reason?: string
+  ): Promise<{ status: string; shopkeeper: ShopkeeperRecord }> {
+    const payload = {
+      reason: reason || 'Pharmacy suspension revoked by CDSCO regulatory authority.',
+    };
+    console.log(`[realApi] POST /api/admin/shopkeepers/${id}/unsuspend`, payload);
+    const res = await apiClient.post(`/api/admin/shopkeepers/${id}/unsuspend`, payload);
+    const data = res.data.data || res.data;
+    return {
+      status: 'success',
+      shopkeeper: {
+        shopId: data.shopkeeperId || data.shopId || id,
+        shopName: data.shopName || 'Approved Pharmacy',
+        verificationStatus: 'approved',
+        ...data,
+      } as any,
+    };
+  },
+
   // ── Audit Logs ───────────────────────────────────────────────────────────
   async getAuditLogs(params?: { targetType?: string; action?: string; search?: string }): Promise<PaginatedResponse<AuditLogEntry>> {
     console.log('[realApi] GET /api/admin/audit-logs with params:', params);

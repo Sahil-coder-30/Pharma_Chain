@@ -14,13 +14,11 @@ import {
   Phone,
   Calendar,
   Clock,
-  Sun,
-  Moon,
   Sparkles,
 } from 'lucide-react';
 
 export const CompanyProfileView: React.FC = () => {
-  const { profile, theme, toggleThemeMode } = useDashboard();
+  const { profile } = useDashboard();
   const { user, kycStatus } = useAuth();
   const activeProfile = user || profile;
 
@@ -57,26 +55,11 @@ export const CompanyProfileView: React.FC = () => {
           </div>
         </div>
 
-        {/* Theme Mode Preference Selector inside Settings */}
+        {/* Compliance Verification Badge */}
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] flex items-center gap-2 text-xs">
-            <span className="text-[var(--text-muted)] font-medium">Interface Mode:</span>
-            <button
-              onClick={() => toggleThemeMode()}
-              className="px-3 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-active)] border border-[var(--border)] text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5 transition-all"
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Obsidian Dark</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-slate-700" />
-                  <span>Clean Light</span>
-                </>
-              )}
-            </button>
+          <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-emerald-700 font-bold">CDSCO GxP Validated</span>
           </div>
         </div>
       </div>

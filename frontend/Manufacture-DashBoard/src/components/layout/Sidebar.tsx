@@ -52,6 +52,11 @@ export const Sidebar: React.FC = () => {
 
   const { user, kycStatus, logout } = useAuth();
 
+  const handleNav = (id: NavRoute) => {
+    navigateTo(id);
+    setIsMobileSidebarOpen(false);
+  };
+
   const activeRecallsCount = recalls.filter((r) => r.status === 'ACTIVE').length;
   const unresolvedAlertsCount = alerts.filter((a) => !a.resolved).length;
 
@@ -63,45 +68,31 @@ export const Sidebar: React.FC = () => {
       ],
     },
     {
-      title: 'Operations',
+      title: 'Manufacturing & Catalog',
       items: [
         { id: 'batches', label: 'Batches & Production', icon: <Boxes className="w-4 h-4" /> },
         { id: 'create-batch', label: 'Create Production Batch', icon: <PlusCircle className="w-4 h-4" /> },
-        { id: 'inventory', label: 'Medicine Inventory', icon: <Boxes className="w-4 h-4" /> },
-        { id: 'qr-codes', label: 'QR Code Operations', icon: <QrCode className="w-4 h-4" /> },
+        { id: 'inventory', label: 'Formulations Catalog', icon: <FileSpreadsheet className="w-4 h-4" /> },
+        { id: 'qr-codes', label: 'QR Packaging Hub', icon: <QrCode className="w-4 h-4" /> },
       ],
     },
     {
-      title: 'Traceability',
+      title: 'Blockchain & Compliance',
       items: [
-        { id: 'traceability', label: 'Traceability Explorer', icon: <Search className="w-4 h-4" /> },
-        { id: 'ledger', label: 'Fabric Ledger Explorer', icon: <Database className="w-4 h-4" /> },
-      ],
-    },
-    {
-      title: 'Quality & Safety',
-      items: [
+        { id: 'ledger', label: 'Fabric Blockchain Ledger', icon: <Database className="w-4 h-4" /> },
         {
           id: 'recalls',
-          label: 'Recall & Safety Center',
+          label: 'Recall Command Center',
           icon: <AlertOctagon className="w-4 h-4" />,
           badge: activeRecallsCount > 0 ? activeRecallsCount : undefined,
           badgeColor: 'bg-rose-500 text-white',
         },
-        {
-          id: 'alerts',
-          label: 'Quality & Security Alerts',
-          icon: <BellRing className="w-4 h-4" />,
-          badge: unresolvedAlertsCount > 0 ? unresolvedAlertsCount : undefined,
-          badgeColor: 'bg-amber-500 text-slate-900',
-        },
       ],
     },
     {
-      title: 'Analytics & Reporting',
+      title: 'Facility Administration',
       items: [
-        { id: 'analytics', label: 'Production Analytics', icon: <BarChart3 className="w-4 h-4" /> },
-        { id: 'reports', label: 'Regulatory Reports', icon: <FileSpreadsheet className="w-4 h-4" /> },
+        { id: 'settings', label: 'Settings & Key Vault', icon: <ShieldCheck className="w-4 h-4" /> },
       ],
     },
   ];
@@ -115,7 +106,7 @@ export const Sidebar: React.FC = () => {
         } border-b border-[var(--border)] min-h-[64px]`}
       >
         <div
-          onClick={() => navigateTo('dashboard')}
+          onClick={() => handleNav('dashboard')}
           className="flex items-center gap-2.5 cursor-pointer overflow-hidden"
           title="PharmaChain"
         >
@@ -171,7 +162,7 @@ export const Sidebar: React.FC = () => {
               return (
                 <button
                   key={item.id}
-                  onClick={() => navigateTo(item.id)}
+                  onClick={() => handleNav(item.id)}
                   title={isSidebarCollapsed ? item.label : undefined}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                     isActive
@@ -205,7 +196,7 @@ export const Sidebar: React.FC = () => {
           <>
             <div className="flex items-center justify-between">
               <div
-                onClick={() => navigateTo('profile')}
+                onClick={() => handleNav('profile')}
                 className="flex items-center gap-2 min-w-0 cursor-pointer group flex-1 mr-2"
                 title="Manage Company Legal Profile"
               >
@@ -228,7 +219,7 @@ export const Sidebar: React.FC = () => {
 
               <div className="flex items-center gap-1 shrink-0">
                 <button
-                  onClick={() => navigateTo('security')}
+                  onClick={() => handleNav('security')}
                   title="Cryptographic Key Vault & Security"
                   className={`p-1.5 rounded-lg transition-colors ${
                     activeRoute === 'security'
@@ -250,7 +241,7 @@ export const Sidebar: React.FC = () => {
 
             <div className="flex items-center justify-between text-[10px]">
               <button
-                onClick={() => navigateTo('profile')}
+                onClick={() => handleNav('profile')}
                 className={`px-2 py-0.5 rounded font-mono font-bold transition-all cursor-pointer ${
                   activeRoute === 'profile'
                     ? 'bg-emerald-600 text-white'
@@ -270,7 +261,7 @@ export const Sidebar: React.FC = () => {
         ) : (
           <div className="flex flex-col items-center gap-2">
             <button
-              onClick={() => navigateTo('profile')}
+              onClick={() => handleNav('profile')}
               title="Company Profile & Settings"
               className={`p-2 rounded-xl transition-colors ${
                 activeRoute === 'profile'
@@ -281,7 +272,7 @@ export const Sidebar: React.FC = () => {
               <Building2 className="w-4 h-4" />
             </button>
             <button
-              onClick={() => navigateTo('security')}
+              onClick={() => handleNav('security')}
               title="Key Vault & Security"
               className={`p-2 rounded-xl transition-colors ${
                 activeRoute === 'security'

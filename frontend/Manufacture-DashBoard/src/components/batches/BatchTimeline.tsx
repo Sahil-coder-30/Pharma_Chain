@@ -8,6 +8,7 @@ import {
   Package,
   Truck,
   AlertOctagon,
+  AlertTriangle,
   CheckCircle2,
 } from 'lucide-react';
 
@@ -16,6 +17,8 @@ interface BatchTimelineProps {
   createdAt?: string;
   txHash?: string;
   blockNumber?: number;
+  blockchainStatus?: string;
+  blockchainError?: string;
 }
 
 export const BatchTimeline: React.FC<BatchTimelineProps> = ({
@@ -23,7 +26,11 @@ export const BatchTimeline: React.FC<BatchTimelineProps> = ({
   createdAt,
   txHash,
   blockNumber,
+  blockchainStatus,
+  blockchainError,
 }) => {
+  const isBlockchainFailed = blockchainStatus === 'FAILED';
+
   const steps = [
     {
       id: 'CREATED',
@@ -39,9 +46,11 @@ export const BatchTimeline: React.FC<BatchTimelineProps> = ({
     },
     {
       id: 'LEDGER',
-      label: 'Blockchain Registered',
-      description: blockNumber ? `Fabric Block #${blockNumber}` : 'Appended to ledger',
-      icon: <Database className="w-4 h-4" />,
+      label: isBlockchainFailed ? 'Blockchain Sync Failed' : 'Blockchain Registered',
+      description: isBlockchainFailed
+        ? (blockchainError ? `Error: ${blockchainError.slice(0, 30)}...` : 'Commit Failed - Retry Required')
+        : (blockNumber ? `Fabric Block #${blockNumber}` : 'Appended to Fabric ledger'),
+      icon: isBlockchainFailed ? <AlertTriangle className="w-4 h-4" /> : <Database className="w-4 h-4" />,
     },
     {
       id: 'QR_GEN',
@@ -64,6 +73,9 @@ export const BatchTimeline: React.FC<BatchTimelineProps> = ({
   ];
 
   const getStepStatus = (index: number) => {
+    if (index === 2 && isBlockchainFailed) {
+      return 'failed';
+    }
     if (status === 'RECALLED') {
       return index <= 3 ? 'completed' : 'recalled';
     }
@@ -97,6 +109,7 @@ export const BatchTimeline: React.FC<BatchTimelineProps> = ({
           const isCurrent = stepState === 'current';
           const isActiveSpin = stepState === 'active-spin';
           const isRecalled = stepState === 'recalled';
+          const isFailed = stepState === 'failed';
 
           return (
             <div key={step.id} className="flex flex-col items-center text-center relative z-10 w-36">
@@ -104,6 +117,8 @@ export const BatchTimeline: React.FC<BatchTimelineProps> = ({
                 className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${
                   isCompleted
                     ? 'bg-emerald-500 border-emerald-500 text-white'
+                    : isFailed
+                    ? 'bg-rose-500 border-rose-500 text-white'
                     : isActiveSpin
                     ? 'bg-brand-600 border-brand-600 text-white animate-pulse'
                     : isCurrent
@@ -115,6 +130,8 @@ export const BatchTimeline: React.FC<BatchTimelineProps> = ({
               >
                 {isCompleted ? (
                   <CheckCircle2 className="w-5 h-5" />
+                ) : isFailed ? (
+                  <AlertTriangle className="w-5 h-5 text-white" />
                 ) : isActiveSpin ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
@@ -125,14 +142,16 @@ export const BatchTimeline: React.FC<BatchTimelineProps> = ({
               <div className="mt-2.5">
                 <p
                   className={`text-xs font-bold leading-tight ${
-                    isCompleted || isCurrent || isActiveSpin
+                    isFailed
+                      ? 'text-rose-500'
+                      : isCompleted || isCurrent || isActiveSpin
                       ? 'text-slate-900'
                       : 'text-slate-400'
                   }`}
                 >
                   {step.label}
                 </p>
-                <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                <p className={`text-[10px] mt-0.5 leading-snug ${isFailed ? 'text-rose-400 font-medium' : 'text-slate-500'}`}>
                   {step.description}
                 </p>
               </div>
@@ -147,6 +166,7 @@ export const BatchTimeline: React.FC<BatchTimelineProps> = ({
           const stepState = getStepStatus(index);
           const isCompleted = stepState === 'completed';
           const isActiveSpin = stepState === 'active-spin';
+          const isFailed = stepState === 'failed';
 
           return (
             <div key={step.id} className="relative flex items-start gap-3">
@@ -154,12 +174,14 @@ export const BatchTimeline: React.FC<BatchTimelineProps> = ({
                 className={`-ml-[25px] w-6 h-6 rounded-full flex items-center justify-center border-2 ${
                   isCompleted
                     ? 'bg-emerald-500 border-emerald-500 text-white'
+                    : isFailed
+                    ? 'bg-rose-500 border-rose-500 text-white'
                     : isActiveSpin
                     ? 'bg-brand-600 border-brand-600 text-white'
                     : 'bg-white border-slate-300 text-slate-400'
                 }`}
               >
-                {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : step.icon}
+                {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : isFailed ? <AlertTriangle className="w-3.5 h-3.5 text-white" /> : step.icon}
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-900">{step.label}</p>

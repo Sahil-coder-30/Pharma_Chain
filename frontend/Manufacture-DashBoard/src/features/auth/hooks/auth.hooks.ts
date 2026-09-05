@@ -11,6 +11,7 @@ import {
   registerSuccess,
   setKYCStatus,
   setBlocked,
+  setUnblocked,
   updateUser,
   logout as logoutAction,
 } from '../slice/auth.slice';
@@ -21,6 +22,7 @@ import {
   forgotPasswordAPI,
   resetPasswordAPI,
   approveKYCAPI,
+  fetchAccountStatusAPI,
   logoutAPI,
 } from '../services/auth.api';
 import {
@@ -247,6 +249,35 @@ export const useAuth = () => {
     }
   }, [dispatch, authState.user, showToast]);
 
+  const handleCheckKYCStatus = useCallback(async () => {
+    try {
+      dispatch(setAuthLoading(true));
+      const result = await fetchAccountStatusAPI();
+      if (result && result.kycStatus === 'APPROVED') {
+        dispatch(setUnblocked());
+        showToast({
+          type: 'success',
+          title: 'CDSCO Clearance Granted',
+          message: 'Facility license and cryptographic root keys have been endorsed.',
+        });
+      } else {
+        showToast({
+          type: 'info',
+          title: 'Status: Under Regulatory Review',
+          message: 'Your manufacturing license and facility documents are currently being processed by the CDSCO Directorate.',
+        });
+      }
+    } catch (err: any) {
+      showToast({
+        type: 'info',
+        title: 'Status Checked',
+        message: 'Application remains in the statutory review queue.',
+      });
+    } finally {
+      dispatch(setAuthLoading(false));
+    }
+  }, [dispatch, showToast]);
+
   const handleLogout = useCallback(() => {
     logoutAPI().catch(() => {});
     dispatch(logoutAction());
@@ -267,6 +298,7 @@ export const useAuth = () => {
     logout: handleLogout,
     setAuthView: (v: AuthViewMode) => dispatch(setAuthView(v)),
     simulateKYCApproval: handleSimulateKYCApproval,
+    checkKYCStatus: handleCheckKYCStatus,
     clearError: () => dispatch(clearAuthError()),
     blockedReason: authState.blockedReason,
     blockedAt: authState.blockedAt,

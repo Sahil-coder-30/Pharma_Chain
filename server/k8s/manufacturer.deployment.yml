@@ -43,6 +43,8 @@ spec:
         - containerPort: 3001
           name: mfr-http
         env:
+        - name: TZ
+          value: "Asia/Kolkata"
         - name: PORT
           value: "3001"
         - name: NODE_ENV
@@ -70,3 +72,10 @@ spec:
             secretKeyRef:
               name: auth-secret
               key: ADMIN_TOKEN
+        # ── Redis Cache for Manufacturer Status & Session Verification ─────────
+        - name: REDIS_URI
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: REDIS_URI
+

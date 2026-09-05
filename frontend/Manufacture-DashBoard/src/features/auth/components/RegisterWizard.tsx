@@ -163,7 +163,7 @@ export const RegisterWizard: React.FC = () => {
       name: `CDSCO_Approval_Doc_${Math.floor(100 + Math.random() * 900)}.pdf`,
       type: 'application/pdf',
       size: 1400000,
-      uploadDate: new Date().toISOString().split('T')[0],
+      uploadDate: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()),
       status: 'UPLOADED',
     };
     setForm((prev) => ({ ...prev, kycDocs: [...prev.kycDocs, newDoc] }));

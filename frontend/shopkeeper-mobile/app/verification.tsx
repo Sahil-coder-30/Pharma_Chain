@@ -32,11 +32,76 @@ import {
   Layers,
   Lock,
 } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withRepeat,
+  cancelAnimation,
+  Easing,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { scanMedicine, intakeMedicine, dispenseMedicine, scanCustomerMedicine } from '../src/services/api/scan';
 import { useAuthStore } from '../src/store/authStore';
 import { PharmaTheme } from '../src/constants/theme';
 import { Skeleton } from '../src/components/common/Skeleton';
+
+function AuthenticityVerdictStamp({
+  color,
+}: {
+  color: string;
+}) {
+  const isWarning = color === '#dc2626' || color === '#d97706';
+  const stampProgress = useSharedValue(0);
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    if (!isWarning) {
+      stampProgress.value = withSequence(
+        withTiming(1.18, { duration: 140, easing: Easing.out(Easing.cubic) }),
+        withTiming(1, { duration: 200, easing: Easing.out(Easing.back(1.5)) })
+      );
+    } else {
+      pulse.value = withRepeat(
+        withTiming(1.1, { duration: 650, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
+    }
+
+    return () => {
+      cancelAnimation(pulse);
+      cancelAnimation(stampProgress);
+    };
+  }, [isWarning, color]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    if (isWarning) {
+      return {
+        transform: [{ scale: pulse.value }],
+      };
+    }
+    return {
+      transform: [{ scale: stampProgress.value }],
+      opacity: interpolate(stampProgress.value, [0, 1], [0, 1], Extrapolation.CLAMP),
+    };
+  });
+
+  return (
+    <Animated.View style={[styles.iconCircle, animatedStyle]}>
+      {color === '#dc2626' ? (
+        <ShieldAlert color="#ffffff" size={38} />
+      ) : color === '#d97706' ? (
+        <AlertTriangle color="#ffffff" size={38} />
+      ) : (
+        <CheckCircle2 color="#ffffff" size={38} />
+      )}
+    </Animated.View>
+  );
+}
 
 // Mock database to simulate fetching data based on ID
 const mockDatabase: Record<string, any> = {
@@ -440,15 +505,7 @@ export default function VerificationScreen() {
           {/* Result Verdict Hero */}
           <View style={[styles.resultCard, { backgroundColor: data.color }]}>
             <View style={styles.resultHeader}>
-              <View style={styles.iconCircle}>
-                {data.color === '#dc2626' ? (
-                  <ShieldAlert color="#ffffff" size={38} />
-                ) : data.color === '#d97706' ? (
-                  <AlertTriangle color="#ffffff" size={38} />
-                ) : (
-                  <CheckCircle2 color="#ffffff" size={38} />
-                )}
-              </View>
+              <AuthenticityVerdictStamp color={data.color} />
               <View style={styles.resultHeaderText}>
                 <View style={styles.verdictChip}>
                   <Sparkles size={11} color="#ffffff" />

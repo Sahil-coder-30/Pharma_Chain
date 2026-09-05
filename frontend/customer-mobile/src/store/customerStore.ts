@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, SavedMedicine } from '../types';
+import { SavedMedicine } from '../types';
 import { SAVED_MEDICINES } from '../data/customerData';
 
 export interface ScanHistoryRecord {
@@ -18,11 +18,8 @@ export interface ScanHistoryRecord {
 }
 
 interface CustomerState {
-  user: User | null;
   savedMedicines: SavedMedicine[];
   scanHistory: ScanHistoryRecord[];
-  setUser: (user: User) => void;
-  clearUser: () => void;
   addSavedMedicine: (medicine: SavedMedicine) => void;
   removeSavedMedicine: (id: string) => void;
   addScanRecord: (record: ScanHistoryRecord) => void;
@@ -32,11 +29,8 @@ interface CustomerState {
 export const useCustomerStore = create<CustomerState>()(
   persist(
     (set) => ({
-      user: null,
       savedMedicines: SAVED_MEDICINES,
       scanHistory: [],
-      setUser: (user: User) => set({ user }),
-      clearUser: () => set({ user: null }),
       addSavedMedicine: (medicine: SavedMedicine) =>
         set((state) => ({
           savedMedicines: [

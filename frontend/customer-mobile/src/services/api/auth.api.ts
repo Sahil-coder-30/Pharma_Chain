@@ -17,20 +17,17 @@ interface MeResponse {
 // ── API Calls ─────────────────────────────────────────────────────────────────
 
 /**
- * Sends the Google authorization code to the consumer-service backend.
- * The backend performs the secure server-side code exchange (keeping the
- * Google client secret off the device) and returns a PharmaChain JWT.
+ * Sends the native Google ID Token to the consumer-service backend.
+ * The backend verifies the token directly with Google and returns a PharmaChain JWT.
+ * No redirect URIs or client secrets required!
  *
- * @param code        The authorization code from expo-auth-session
- * @param redirectUri The exact redirect URI used in the OAuth request (must match)
+ * @param idToken The Google ID token from @react-native-google-signin/google-signin
  */
-export const signInWithGoogleCode = async (
-  code: string,
-  redirectUri: string
+export const signInWithGoogleToken = async (
+  idToken: string
 ): Promise<{ token: string; user: ConsumerUser }> => {
   const response = await consumerApiClient.post<AuthResponse>('/auth/google', {
-    code,
-    redirectUri,
+    idToken,
   });
   return { token: response.data.token, user: response.data.user };
 };
@@ -43,5 +40,17 @@ export const getMe = async (token: string): Promise<ConsumerUser> => {
   const response = await consumerApiClient.get<MeResponse>('/auth/me', {
     headers: { Authorization: `Bearer ${token}` },
   });
+  return response.data.user;
+};
+
+/**
+ * Updates consumer profile in MongoDB Atlas (name, phone, address).
+ */
+export const updateProfile = async (data: {
+  name?: string;
+  phone?: string;
+  address?: string;
+}): Promise<ConsumerUser> => {
+  const response = await consumerApiClient.put<MeResponse>('/auth/profile', data);
   return response.data.user;
 };

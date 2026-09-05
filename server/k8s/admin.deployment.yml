@@ -22,6 +22,8 @@ spec:
         - containerPort: 3005
           name: http
         env:
+        - name: TZ
+          value: "Asia/Kolkata"
         - name: PORT
           value: "3005"
         - name: NODE_ENV

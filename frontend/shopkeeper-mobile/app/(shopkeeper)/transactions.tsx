@@ -31,6 +31,23 @@ import { SkeletonHistoryCard } from '../../src/components/common/Skeleton';
 
 const TABS = ['All', 'Verified', 'Suspicious', 'Counterfeit'] as const;
 
+const formatISTDisplay = (timeVal?: string, timestamp?: string) => {
+  if (timeVal && !timeVal.includes('T') && !timeVal.includes('Z')) return timeVal;
+  const raw = timestamp || timeVal;
+  if (!raw) return 'Recently Logged';
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return String(raw);
+    return d.toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return timeVal || 'Recently Logged';
+  }
+};
+
 export default function TransactionsScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<typeof TABS[number]>('All');
@@ -162,7 +179,7 @@ export default function TransactionsScreen() {
 
             <View style={styles.timeRow}>
               <Clock size={11} color="#94a3b8" style={{ marginRight: 4 }} />
-              <Text style={styles.timeText}>{item.time || 'Recently Logged'}</Text>
+              <Text style={styles.timeText}>{formatISTDisplay(item.time, item.timestamp || item.createdAt)}</Text>
             </View>
           </View>
           <ChevronRight size={16} color="#cbd5e1" style={{ marginLeft: 6 }} />

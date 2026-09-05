@@ -32,6 +32,14 @@ export const AuditLogsPage: React.FC = () => {
     });
   }, [auditLogs, targetTypeFilter, searchQuery]);
 
+  const formatISTISO = (d: Date | string | number) => {
+    const date = new Date(d);
+    const istOffsetMs = 5.5 * 60 * 60 * 1000;
+    const ist = new Date(date.getTime() + istOffsetMs);
+    const pad = (n: number, z = 2) => String(n).padStart(z, '0');
+    return `${ist.getUTCFullYear()}-${pad(ist.getUTCMonth() + 1)}-${pad(ist.getUTCDate())}T${pad(ist.getUTCHours())}:${pad(ist.getUTCMinutes())}:${pad(ist.getUTCSeconds())}.${pad(ist.getUTCMilliseconds(), 3)}+05:30`;
+  };
+
   const handleExportCSV = () => {
     if (filteredLogs.length === 0) {
       showToast({
@@ -42,10 +50,10 @@ export const AuditLogsPage: React.FC = () => {
       return;
     }
 
-    const headers = ['Log ID', 'Timestamp', 'Officer Name', 'Officer Role', 'IP Address', 'Action', 'Target Type', 'Target ID', 'Target Name', 'Reason / Remarks'];
+    const headers = ['Log ID', 'Timestamp (IST)', 'Officer Name', 'Officer Role', 'IP Address', 'Action', 'Target Type', 'Target ID', 'Target Name', 'Reason / Remarks'];
     const rows = filteredLogs.map((l) => [
       l._id,
-      new Date(l.createdAt).toISOString(),
+      formatISTISO(l.createdAt),
       `"${l.performedBy.fullName}"`,
       l.performedBy.role,
       l.ipAddress || '10.244.0.15',
@@ -60,7 +68,8 @@ export const AuditLogsPage: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `CDSCO_PharmaChain_Audit_Log_${new Date().toISOString().split('T')[0]}.csv`);
+    const istDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+    link.setAttribute('download', `CDSCO_PharmaChain_Audit_Log_${istDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -160,7 +169,8 @@ export const AuditLogsPage: React.FC = () => {
                       {/* Timestamp */}
                       <td className="px-6 py-4.5">
                         <div className="font-semibold text-slate-900 dark:text-white text-xs">
-                          {new Date(log.createdAt).toLocaleDateString([], {
+                          {new Date(log.createdAt).toLocaleDateString('en-IN', {
+                            timeZone: 'Asia/Kolkata',
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric',
@@ -168,7 +178,12 @@ export const AuditLogsPage: React.FC = () => {
                         </div>
                         <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono flex items-center gap-1 mt-0.5">
                           <Clock className="w-3 h-3" />
-                          {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          {new Date(log.createdAt).toLocaleTimeString('en-IN', {
+                            timeZone: 'Asia/Kolkata',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
                         </div>
                       </td>
 

@@ -45,8 +45,6 @@ export default function ScanScreen() {
   // Animation values
   const laserAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const rippleAnim1 = useRef(new Animated.Value(0)).current;
-  const rippleAnim2 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (params.mode && (params.mode === 'RECEIVE' || params.mode === 'DISPENSE' || params.mode === 'VERIFY')) {
@@ -99,39 +97,6 @@ export default function ScanScreen() {
 
     return () => pulse.stop();
   }, [pulseAnim]);
-
-  // 3. Radar Wave Ripples
-  useEffect(() => {
-    const createRipple = (anim: Animated.Value, delay: number) => {
-      return Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 2200,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-    };
-
-    const r1 = createRipple(rippleAnim1, 0);
-    const r2 = createRipple(rippleAnim2, 1100);
-
-    r1.start();
-    r2.start();
-
-    return () => {
-      r1.stop();
-      r2.stop();
-    };
-  }, [rippleAnim1, rippleAnim2]);
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -201,7 +166,7 @@ export default function ScanScreen() {
 
           <View style={styles.hudTelemetryPill}>
             <View style={styles.pulseDot} />
-            <Text style={styles.hudTelemetryText}>PEER SYNCED • 24ms</Text>
+            <Text style={styles.hudTelemetryText}>Ready to Scan</Text>
           </View>
 
           <TouchableOpacity
@@ -233,7 +198,7 @@ export default function ScanScreen() {
           >
             <ArrowDownLeft size={14} color={scanMode === 'RECEIVE' ? '#ffffff' : '#94a3b8'} />
             <Text style={[styles.modeBtnText, scanMode === 'RECEIVE' && styles.modeBtnTextActive]}>
-              + Inbound
+              Inbound
             </Text>
           </TouchableOpacity>
 
@@ -244,53 +209,13 @@ export default function ScanScreen() {
           >
             <ArrowUpRight size={14} color={scanMode === 'DISPENSE' ? '#ffffff' : '#94a3b8'} />
             <Text style={[styles.modeBtnText, scanMode === 'DISPENSE' && styles.modeBtnTextActive]}>
-              - Dispense
+              Dispense
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Viewfinder Target Reticle with Animated Laser & Radar */}
+        {/* Viewfinder Target Reticle with Animated Laser */}
         <View style={styles.viewFinderContainer}>
-          {/* Radar Waves */}
-          <Animated.View
-            style={[
-              styles.radarWave,
-              {
-                opacity: rippleAnim1.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: [0.6, 0.3, 0],
-                }),
-                transform: [
-                  {
-                    scale: rippleAnim1.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.4, 1.4],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.radarWave,
-              {
-                opacity: rippleAnim2.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: [0.6, 0.3, 0],
-                }),
-                transform: [
-                  {
-                    scale: rippleAnim2.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.4, 1.4],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          />
-
           {/* Pulsing Target Frame */}
           <Animated.View
             style={[
@@ -324,35 +249,28 @@ export default function ScanScreen() {
             </Animated.View>
           </Animated.View>
 
-          {/* Telemetry HUD Labels */}
-          <View style={styles.telemetryTagRow}>
-            <Text style={styles.telemetryTagText}>CIPHER: ES256</Text>
-            <Text style={styles.telemetryTagText}>FPS: 60</Text>
-            <Text style={styles.telemetryTagText}>RESOLUTION: 4K</Text>
-          </View>
-
           <Text style={styles.instructionTitle}>
             {scanMode === 'VERIFY'
-              ? 'Cryptographic Verification HUD'
+              ? 'Verify Medicine'
               : scanMode === 'RECEIVE'
-              ? 'Inbound Stock Intake Terminal'
-              : 'Point-of-Sale Dispense Mode'}
+              ? 'Receive Inbound Stock'
+              : 'Dispense Medicine'}
           </Text>
           <Text style={styles.instructionSub}>
-            Align the 2D DataMatrix code within the illuminated crosshairs
+            Align QR or 2D DataMatrix code within the frame
           </Text>
         </View>
 
         {/* Bottom Spacer for Tab Bar Clearance */}
-        <View style={{ height: 80 }} />
+        <View style={{ height: 90 }} />
       </View>
 
       {/* Loading Radar Overlay */}
       {loading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3b82f6" />
-          <Text style={styles.loadingText}>Verifying Blockchain Ledger Hash...</Text>
-          <Text style={styles.loadingSub}>Validating ES256 Signature with CDSCO Authority</Text>
+          <Text style={styles.loadingText}>Verifying Medicine...</Text>
+          <Text style={styles.loadingSub}>Checking authenticity on PharmaChain ledger</Text>
         </View>
       )}
     </View>
@@ -496,14 +414,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: 20,
   },
-  radarWave: {
-    position: 'absolute',
-    width: FRAME_SIZE * 1.1,
-    height: FRAME_SIZE * 1.1,
-    borderRadius: (FRAME_SIZE * 1.1) / 2,
-    borderWidth: 1.5,
-    borderColor: '#3b82f6',
-  },
   scanFrame: {
     width: FRAME_SIZE,
     height: FRAME_SIZE,
@@ -581,31 +491,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginTop: -5,
   },
-  telemetryTagRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 14,
-    marginBottom: 6,
-  },
-  telemetryTagText: {
-    fontSize: 9.5,
-    color: '#38bdf8',
-    fontWeight: '800',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    letterSpacing: 0.5,
-  },
   instructionTitle: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '800',
     textAlign: 'center',
+    marginTop: 18,
     marginBottom: 4,
   },
   instructionSub: {
     color: 'rgba(255, 255, 255, 0.75)',
-    fontSize: 12,
+    fontSize: 13,
     textAlign: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,

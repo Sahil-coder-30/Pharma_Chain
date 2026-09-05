@@ -1,4 +1,4 @@
-export type BatchMintStatus = 'DRAFT' | 'PENDING' | 'MINTING' | 'MINTED' | 'PACKAGED' | 'DISTRIBUTED' | 'RECALLED';
+export type BatchMintStatus = 'DRAFT' | 'PENDING' | 'MINTING' | 'MINTED' | 'FAILED' | 'PACKAGED' | 'DISTRIBUTED' | 'RECALLED';
 
 
 export type PackStatus = 'PACKAGED' | 'AT_SHOP' | 'SOLD' | 'RECALLED' | 'COUNTERFEIT';
@@ -119,6 +119,7 @@ export interface Batch {
 
   // Blockchain & Minting Lifecycle
   mintStatus: BatchMintStatus;
+  mintError?: string;
   recallReason?: string;
   recallDate?: string;
   createdAt: string;
@@ -128,6 +129,9 @@ export interface Batch {
   s3DownloadUrl?: string;
   s3FileKey?: string;
   s3Mode?: 'aws' | 'local' | string;
+  blockchainStatus?: 'COMMITTED' | 'PARTIAL' | 'FAILED' | 'PENDING' | string;
+  blockchainError?: string;
+  blockchainRecordedCount?: number;
 }
 
 
@@ -152,7 +156,7 @@ export interface TransitionRecord {
   sellingDate?: string;
   sellingTime?: string;
   sellerId?: string;
-  blockNumber: number;
+  blockNumber?: number;
   txId?: string;
   timestamp: string;
   state?: 'COMMITTED' | 'RECALLED' | 'QUARANTINED' | 'INTAKE' | 'SALE';
@@ -282,5 +286,29 @@ export interface DashboardStats {
   inventoryUtilization?: string;
   warehouseCapacity?: string;
   ledgerBlocks?: number;
+}
+
+export interface FormulationItem {
+  _id: string;
+  medicineName: string;
+  genericName?: string;
+  brandName?: string;
+  therapeuticCategory?: string;
+  drugSchedule?: string;
+  pharmacopoeiaStandard?: string;
+  composition?: string;
+  dosage?: string;
+  strength?: string;
+  form?: string;
+  route?: string;
+  storageConditions?: string;
+  shelfLifeMonths?: number;
+  totalQuantityProduced: number;
+  batchCount: number;
+  activeBatches: number;
+  recalledBatches: number;
+  latestManufacturingDate?: string;
+  latestExpiryDate?: string;
+  latestBatchId?: string;
 }
 

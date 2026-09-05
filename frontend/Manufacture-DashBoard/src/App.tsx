@@ -19,26 +19,22 @@ import { AuthLayout } from './features/auth/components/AuthLayout';
 // Views
 import { Dashboard } from './features/dashboard/components/Dashboard';
 import { BatchesView } from './components/batches/BatchesView';
+import { BatchDetailView } from './components/batches/BatchDetailView';
 import { CreateBatchWizard } from './components/create-batch/CreateBatchWizard';
 import { MedicineInventoryView } from './components/inventory/MedicineInventoryView';
 import { QRCodeHubView } from './components/qr/QRCodeHubView';
-import { TraceabilityExplorerView } from './components/traceability/TraceabilityExplorerView';
 import { BlockchainLedgerView } from './components/traceability/BlockchainLedgerView';
 import { RecallCenterView } from './components/recall/RecallCenterView';
-import { QualityAlertsView } from './components/alerts/QualityAlertsView';
-import { AnalyticsReportsView } from './components/analytics/AnalyticsReportsView';
-import { OrdersShipmentsView } from './components/orders/OrdersShipmentsView';
-import { CompanyProfileView } from './components/settings/CompanyProfileView';
-import { SecuritySettingsView } from './components/settings/SecuritySettingsView';
-import { Clock, ShieldAlert, CheckCircle2, Zap } from 'lucide-react';
+import { SettingsView } from './components/settings/SettingsView';
+import { Clock, ShieldAlert, CheckCircle2, RefreshCw } from 'lucide-react';
 
 import './App.scss';
 import './styles/BlockedScreen.scss';
 
 // ── Inner orchestrator — has access to Redux store via hooks ───────────────────
 const AppOrchestrator: React.FC = () => {
-  const { activeRoute, navigateTo, theme } = useDashboard();
-  const { isAuthenticated, kycStatus, simulateKYCApproval, user, blockedReason, blockedAt } = useAuth();
+  const { activeRoute, navigateTo } = useDashboard();
+  const { isAuthenticated, kycStatus, checkKYCStatus, user, blockedReason, blockedAt } = useAuth();
 
   // ── Real-time block status polling ────────────────────────────────────────
   // Polls GET /auth/me every 30 s. When the server reports BLOCKED the
@@ -46,32 +42,57 @@ const AppOrchestrator: React.FC = () => {
   // screen renders immediately without page reload.
   useBlockStatusPoller();
 
-  // Theme initialization on boot before paint
+  // Permanently enforce clean clinical light theme across the application
   useEffect(() => {
-    const isLight = localStorage.getItem('theme') === 'light' || theme === 'light';
-    if (isLight) {
-      document.documentElement.classList.add('light-theme');
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.remove('light-theme');
-      document.documentElement.classList.add('dark');
-    }
-  }, [theme]);
-
-  // Sync active route to browser URL search params
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const routeInUrl = params.get('route');
-    if (routeInUrl && routeInUrl !== activeRoute) {
-      navigateTo(routeInUrl as any);
-    }
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light-theme');
+    localStorage.setItem('theme', 'light');
   }, []);
+
+  // ── Sync Redux activeRoute → browser URL ──────────────────────────────────────
+  // Redux now initialises activeRoute directly from the URL (see dashboard.slice.ts),
+  // so there is no restore step needed here. We just keep the URL in sync as the
+  // user navigates, using pushState for new entries and replaceState when the
+  // browser Back/Forward button triggered the route change.
+  const isRestoringFromUrl = React.useRef(false);
+  const isMounted = React.useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     params.set('route', activeRoute);
-    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+    if (activeRoute !== 'batch-detail') {
+      params.delete('batchId');
+    }
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+
+    if (!isMounted.current) {
+      // First render — URL already has the right route (Redux read it from here).
+      // Just sync any params difference with replaceState; never push a duplicate entry.
+      window.history.replaceState({ route: activeRoute }, '', newUrl);
+      isMounted.current = true;
+    } else if (isRestoringFromUrl.current) {
+      // Back/Forward button — URL was already updated by the browser; just sync Redux params
+      window.history.replaceState({ route: activeRoute }, '', newUrl);
+      isRestoringFromUrl.current = false;
+    } else {
+      // Genuine user-initiated navigation — push a new history entry so Back works
+      window.history.pushState({ route: activeRoute }, '', newUrl);
+    }
   }, [activeRoute]);
+
+  // ── Handle browser Back / Forward buttons ─────────────────────────────────────
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const routeInUrl = (params.get('route') as any) || 'dashboard';
+      isRestoringFromUrl.current = true;
+      navigateTo(routeInUrl);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [navigateTo]);
+
 
   // ── BLOCKED: full-page suspension screen ────────────────────────────────────
   if (kycStatus === 'BLOCKED' || kycStatus === 'SUSPENDED') {
@@ -104,30 +125,23 @@ const AppOrchestrator: React.FC = () => {
         return <Dashboard />;
       case 'batches':
         return <BatchesView />;
+      case 'batch-detail':
+        return <BatchDetailView />;
       case 'create-batch':
         return <CreateBatchWizard />;
       case 'inventory':
         return <MedicineInventoryView />;
       case 'qr-codes':
         return <QRCodeHubView />;
-      case 'traceability':
-        return <TraceabilityExplorerView />;
       case 'ledger':
+      case 'traceability':
         return <BlockchainLedgerView />;
       case 'recalls':
         return <RecallCenterView />;
-      case 'alerts':
-        return <QualityAlertsView />;
-      case 'analytics':
-      case 'reports':
-        return <AnalyticsReportsView />;
-      case 'orders':
-        return <OrdersShipmentsView />;
       case 'profile':
-        return <CompanyProfileView />;
       case 'security':
       case 'settings':
-        return <SecuritySettingsView />;
+        return <SettingsView />;
       default:
         return <Dashboard />;
     }
@@ -137,19 +151,19 @@ const AppOrchestrator: React.FC = () => {
     <div className="app-container">
       {/* Top Banner: KYC PENDING */}
       {kycStatus === 'PENDING' && (
-        <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-amber-200 sticky top-0 z-30 backdrop-blur-md">
+        <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-amber-200 sticky top-0 z-30 backdrop-blur-md">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
             <span>
-              <strong className="text-amber-300">CDSCO KYC Application Pending Review</strong> — ES256 keypair vault provisioning and batch minting are locked until approval.
+              <strong className="text-amber-300">CDSCO KYC Application Pending Review</strong> — ES256 keypair vault provisioning and batch minting are locked until clearance.
             </span>
           </div>
           <button
-            onClick={simulateKYCApproval}
-            className="px-3 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-xs transition-all shrink-0 cursor-pointer"
+            onClick={checkKYCStatus}
+            className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-xs transition-all shrink-0 cursor-pointer"
           >
-            <Zap className="w-3 h-3" />
-            <span>Simulate CDSCO Approval</span>
+            <RefreshCw className="w-3 h-3" />
+            <span>Check Verification Status</span>
           </button>
         </div>
       )}
@@ -159,7 +173,7 @@ const AppOrchestrator: React.FC = () => {
       {/* Global Modals & Portals */}
       <GlobalSearchModal />
       <HelpSupportModal />
-      <BatchDetailsModal />
+      {activeRoute !== 'batch-detail' && <BatchDetailsModal />}
       <InitiateRecallModal />
       <ToastContainer />
     </div>

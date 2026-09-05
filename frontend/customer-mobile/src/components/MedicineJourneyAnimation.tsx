@@ -19,7 +19,7 @@ import {
 } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const STEP_DURATION = 2400; // 2.4s per chapter for an un-eruptable, cinematic flow (~12s total)
+const STEP_DURATION = 1200; // Fast & snappy transitions: ~1.2s per stage (~6s total journey)
 
 interface JourneyProps {
   medicineName?: string;
@@ -56,6 +56,7 @@ export default function MedicineJourneyAnimation({
   const progressAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const translateYAnim = useRef(new Animated.Value(0)).current;
 
   // Continuous motion loops
   const conveyorAnim = useRef(new Animated.Value(0)).current;
@@ -69,7 +70,7 @@ export default function MedicineJourneyAnimation({
     const conveyorLoop = Animated.loop(
       Animated.timing(conveyorAnim, {
         toValue: 40,
-        duration: 1000,
+        duration: 700,
         easing: Easing.linear,
         useNativeDriver: true,
       })
@@ -79,14 +80,14 @@ export default function MedicineJourneyAnimation({
     const riderLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(riderAnim, {
-          toValue: -6,
-          duration: 400,
+          toValue: -5,
+          duration: 250,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(riderAnim, {
-          toValue: 4,
-          duration: 400,
+          toValue: 3,
+          duration: 250,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
@@ -96,7 +97,7 @@ export default function MedicineJourneyAnimation({
     const roadLoop = Animated.loop(
       Animated.timing(roadAnim, {
         toValue: -40,
-        duration: 600,
+        duration: 400,
         easing: Easing.linear,
         useNativeDriver: true,
       })
@@ -107,13 +108,13 @@ export default function MedicineJourneyAnimation({
       Animated.sequence([
         Animated.timing(scanLaserAnim, {
           toValue: 50,
-          duration: 800,
+          duration: 500,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(scanLaserAnim, {
           toValue: 0,
-          duration: 800,
+          duration: 500,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
@@ -124,14 +125,14 @@ export default function MedicineJourneyAnimation({
     const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.05,
-          duration: 800,
+          toValue: 1.04,
+          duration: 500,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 800,
+          duration: 500,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
@@ -228,26 +229,42 @@ export default function MedicineJourneyAnimation({
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 100,
+        duration: 120,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
       Animated.timing(scaleAnim, {
-        toValue: 0.97,
-        duration: 100,
+        toValue: 0.98,
+        duration: 120,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateYAnim, {
+        toValue: -6,
+        duration: 120,
+        easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
     ]).start(() => {
       setCurrentStep(nextIdx);
-      progressAnim.setValue(0);
+      translateYAnim.setValue(6);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 180,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(scaleAnim, {
           toValue: 1,
-          duration: 180,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateYAnim, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
@@ -527,26 +544,33 @@ export default function MedicineJourneyAnimation({
           </View>
         </View>
 
-        {/* Dynamic Animated Scene */}
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+        {/* Dynamic Animated Scene & Details in Synchronized Smooth Motion */}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [
+              { scale: scaleAnim },
+              { translateY: translateYAnim },
+            ],
+          }}
+        >
           {renderIllustration()}
-        </Animated.View>
 
-        {/* Card Info Details */}
-        <Animated.View style={[styles.cardInfoBox, { opacity: fadeAnim }]}>
-          <Text style={styles.cardTitle}>{currentData.title}</Text>
-          <Text style={styles.cardBody}>{currentData.body}</Text>
+          <View style={styles.cardInfoBox}>
+            <Text style={styles.cardTitle}>{currentData.title}</Text>
+            <Text style={styles.cardBody}>{currentData.body}</Text>
 
-          {/* Live Data Specs Grid */}
-          <View style={styles.specsRow}>
-            {currentData.specs.map((spec, i) => (
-              <View key={i} style={styles.specBox}>
-                <Text style={styles.specLabel}>{spec.label}</Text>
-                <Text style={styles.specValue} numberOfLines={1}>
-                  {spec.val}
-                </Text>
-              </View>
-            ))}
+            {/* Live Data Specs Grid */}
+            <View style={styles.specsRow}>
+              {currentData.specs.map((spec, i) => (
+                <View key={i} style={styles.specBox}>
+                  <Text style={styles.specLabel}>{spec.label}</Text>
+                  <Text style={styles.specValue} numberOfLines={1}>
+                    {spec.val}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         </Animated.View>
       </View>
@@ -565,14 +589,18 @@ export default function MedicineJourneyAnimation({
                 isDone && styles.chapterDotDone,
               ]}
             >
-              <Text
-                style={[
-                  styles.chapterDotText,
-                  (isActive || isDone) && styles.chapterDotTextActive,
-                ]}
-              >
-                {step.stepNumber}
-              </Text>
+              {isDone ? (
+                <CheckCircle2 size={15} color="#FFFFFF" strokeWidth={2.6} />
+              ) : (
+                <Text
+                  style={[
+                    styles.chapterDotText,
+                    (isActive || isDone) && styles.chapterDotTextActive,
+                  ]}
+                >
+                  {step.stepNumber}
+                </Text>
+              )}
             </View>
           );
         })}
@@ -631,72 +659,79 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   progressSegmentBg: {
-    height: 4.5,
-    backgroundColor: '#F3D9DB',
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: '#ECEEF1',
+    borderRadius: 2,
     overflow: 'hidden',
   },
   progressSegmentFill: {
     height: '100%',
     backgroundColor: '#FF5342',
-    borderRadius: 3,
+    borderRadius: 2,
   },
   stageCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: '#F3D9DB',
-    shadowColor: '#FF5342',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 5,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ECEEF1',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   stageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   stageTag: {
-    backgroundColor: '#FBD9DC',
+    backgroundColor: '#FFF0F0',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFE2E2',
   },
   stageTagText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#FF5342',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   stageNumberBadge: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8F9FA',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ECEEF1',
   },
   stageNumberText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#17181A',
+    color: '#6B7280',
   },
   illustrationCanvas: {
-    height: 170,
-    backgroundColor: '#FFF7F7',
-    borderRadius: 18,
+    height: 165,
+    backgroundColor: '#FAFBFC',
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#FBD9DC',
-    marginBottom: 16,
+    borderColor: '#EEF0F2',
+    marginBottom: 14,
   },
   factoryGrid: {
     position: 'absolute',
-    inset: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     flexDirection: 'row',
     justifyContent: 'space-around',
     opacity: 0.1,
@@ -984,15 +1019,17 @@ const styles = StyleSheet.create({
   specBox: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8F9FA',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ECEEF1',
   },
   specLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#5B5F63',
+    color: '#6B7280',
     textTransform: 'uppercase',
     marginBottom: 2,
   },
@@ -1004,14 +1041,14 @@ const styles = StyleSheet.create({
   chapterDotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
     marginTop: 14,
   },
   chapterDot: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#F5F5F5',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -1021,19 +1058,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF5342',
     borderColor: '#FF5342',
     shadowColor: '#FF5342',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.28,
     shadowRadius: 6,
-    elevation: 3,
+    elevation: 2,
   },
   chapterDotDone: {
-    backgroundColor: '#2E6B4C',
-    borderColor: '#2E6B4C',
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
   },
   chapterDotText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#5B5F63',
+    color: '#6B7280',
   },
   chapterDotTextActive: {
     color: '#FFFFFF',

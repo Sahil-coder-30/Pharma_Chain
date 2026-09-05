@@ -6,16 +6,21 @@
 
 import jwt from 'jsonwebtoken';
 import Manufacturer from '../models/manufacturer.model.js';
+import {
+    getCachedManufacturerStatus,
+    setCachedManufacturerStatus,
+    refreshManufacturerStatusTTL,
+} from '../services/redis.service.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET;
+const STATUS_TTL_SECONDS = 20 * 60; // 20 minutes sliding window
 
 /**
  * Validates the manufacturer's session JWT and verifies active account status.
- * Token is read from:
- *   1. Authorization: Bearer <token> header
- *   2. HttpOnly cookie named 'mfr_token' (fallback)
- * Attaches req.user, req.manufacturer, and req.authToken on success.
+ * Uses Redis cache with a 20-minute sliding window refreshed on every request
+ * to verify account standing in sub-millisecond time.
+ * Falls back to MongoDB on cache miss or Redis unavailability.
  */
 export const identifyUser = async (req, res, next) => {
     // ── Extract token ─────────────────────────────────────────────────────────
@@ -47,18 +52,66 @@ export const identifyUser = async (req, res, next) => {
         req.user.id = decoded.id || decoded.sub;
         req.authToken = token;
 
-        // ── Verify live DB status for regulatory block enforcement ───────────
+        const mfrId = req.user.id;
+
+        // ── 1. Check Redis Cache for Manufacturer Status (< 1ms) ───────────
+        const cachedStatus = await getCachedManufacturerStatus(mfrId);
+
+        if (cachedStatus) {
+            // Sliding window: refresh TTL to 20 minutes on active request
+            refreshManufacturerStatusTTL(mfrId, STATUS_TTL_SECONDS);
+
+            if (cachedStatus.kycStatus === 'BLOCKED' || cachedStatus.kycStatus === 'SUSPENDED') {
+                console.warn(`[manufacturer-service identifyUser] Redis: Access BLOCKED for ${mfrId}`);
+                return res.status(403).json({
+                    status: 'error',
+                    code: 'ACCOUNT_BLOCKED',
+                    message: 'Your manufacturer account has been blocked by the CDSCO regulatory authority.',
+                    reason: cachedStatus.blockedReason || 'Regulatory compliance freeze.',
+                    blockedAt: cachedStatus.blockedAt,
+                });
+            }
+
+            if (cachedStatus.kycStatus !== 'APPROVED') {
+                console.warn(`[manufacturer-service identifyUser] Redis: Access denied (${cachedStatus.kycStatus}) for ${mfrId}`);
+                return res.status(403).json({
+                    status: 'error',
+                    code: 'KYC_PENDING',
+                    message: 'Account KYC review is still pending CDSCO regulatory approval.',
+                    kycStatus: cachedStatus.kycStatus,
+                });
+            }
+
+            req.manufacturer = cachedStatus;
+            return next();
+        }
+
+        // ── 2. Cache Miss: Query MongoDB Source of Truth ───────────────────
         const manufacturer = await Manufacturer.findOne({
             $or: [
-                { manufacturerId: req.user.id },
+                { manufacturerId: mfrId },
                 { email: (decoded.email || '').toLowerCase() },
             ],
         }).select('-passwordHash').lean();
 
         if (!manufacturer) {
-            console.warn(`[manufacturer-service identifyUser] Account not found for token id: ${req.user.id}`);
+            console.warn(`[manufacturer-service identifyUser] Account not found for token id: ${mfrId}`);
             return res.status(401).json({ status: 'error', code: 'ACCOUNT_NOT_FOUND', message: 'Manufacturer account not found' });
         }
+
+        // Populate Redis cache with 20 min sliding TTL
+        const statusPayload = {
+            manufacturerId: manufacturer.manufacturerId,
+            companyName:    manufacturer.companyName,
+            licenseNumber:  manufacturer.licenseNumber,
+            email:          manufacturer.email,
+            kycStatus:      manufacturer.kycStatus,
+            blockedReason:  manufacturer.blockedReason,
+            blockedAt:      manufacturer.blockedAt,
+            publicKeyPem:   manufacturer.publicKeyPem,
+            keyId:          manufacturer.keyId,
+        };
+        await setCachedManufacturerStatus(manufacturer.manufacturerId, statusPayload, STATUS_TTL_SECONDS);
 
         if (manufacturer.kycStatus === 'BLOCKED' || manufacturer.kycStatus === 'SUSPENDED') {
             console.warn(`[manufacturer-service identifyUser] Access BLOCKED for manufacturer: ${manufacturer.manufacturerId}, reason: "${manufacturer.blockedReason}"`);

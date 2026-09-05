@@ -15,7 +15,7 @@ import {
   Lock,
   KeyRound,
   Eye,
-  Sparkles,
+  Landmark,
   Calendar,
   Clock,
   MapPin,
@@ -196,8 +196,8 @@ export const ManufacturersPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 px-3 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800/80 uppercase inline-flex items-center gap-1.5 shadow-sm">
-              <Sparkles className="w-3 h-3 text-amber-500" />
+            <span className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/70 px-3 py-0.5 rounded-full border border-amber-200/80 dark:border-amber-800/80 uppercase inline-flex items-center gap-1.5 shadow-xs">
+              <Landmark className="w-3 h-3 text-amber-600 dark:text-amber-400" />
               Core Regulatory Keystore Gate
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">• CDSCO Form 25/28</span>

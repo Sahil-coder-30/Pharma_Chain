@@ -24,6 +24,7 @@ interface AdminDataContextType {
   approveShopkeeper: (id: string) => Promise<void>;
   rejectShopkeeper: (id: string, reason: string) => Promise<void>;
   suspendShopkeeper: (id: string, reason: string) => Promise<void>;
+  unsuspendShopkeeper: (id: string) => Promise<void>;
 }
 
 const AdminDataContext = createContext<AdminDataContextType | undefined>(undefined);
@@ -211,6 +212,26 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
 
+  const unsuspendShopkeeper = async (id: string) => {
+    if (!user) throw new Error('Not authenticated');
+    try {
+      const res = await api.unsuspendShopkeeper(id, user);
+      showToast({
+        type: 'success',
+        title: 'Suspension Revoked',
+        message: `Active license status restored for ${res.shopkeeper.shopName}.`,
+      });
+      await refreshData();
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Action Failed',
+        message: err.message || 'Could not unsuspend pharmacy.',
+      });
+      throw err;
+    }
+  };
+
   return (
     <AdminDataContext.Provider
       value={{
@@ -228,6 +249,7 @@ export const AdminDataProvider: React.FC<{ children: ReactNode }> = ({ children 
         approveShopkeeper,
         rejectShopkeeper,
         suspendShopkeeper,
+        unsuspendShopkeeper,
       }}
     >
       {children}

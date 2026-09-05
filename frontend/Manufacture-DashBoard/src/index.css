@@ -9,23 +9,31 @@
 }
 
 
-/* Custom Scrollbar for enterprise tables & sidebars */
+/* Custom Scrollbar for enterprise tables & sidebars (Light Theme) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: rgba(241, 245, 249, 0.7);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgba(203, 213, 225, 0.9);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(148, 163, 184, 1);
+}
+
+.table-scroll-container {
+  overflow-y: auto;
+  overflow-x: auto;
+  max-height: 580px;
+  position: relative;
+  scrollbar-gutter: stable;
 }
 
 /* Animation utilities */

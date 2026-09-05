@@ -9,6 +9,7 @@ import {
     getMeController,
     logoutController,
     getManufacturerPublicKeyController,
+    getAllPublicKeysController,
 } from '../controllers/auth.controller.js';
 import { identifyUser } from '../middleware/identifyUser.middleware.js';
 
@@ -21,6 +22,10 @@ router.post('/register', registerController);
 
 // POST /api/manufacturer/auth/login → sets mfr_token cookie
 router.post('/login', loginController);
+
+// GET /api/manufacturer/auth/keys/all and /api/manufacturer/auth/public/keys/all
+router.get('/keys/all', getAllPublicKeysController);
+router.get('/public/keys/all', getAllPublicKeysController);
 
 // GET /api/manufacturer/auth/key/:id and /api/manufacturer/auth/public/key/:id
 router.get('/key/:id', getManufacturerPublicKeyController);

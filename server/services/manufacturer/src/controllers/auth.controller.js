@@ -4,6 +4,10 @@ import crypto from 'crypto';
 import axios from 'axios';
 import mongoose from 'mongoose';
 import Manufacturer from '../models/manufacturer.model.js';
+import {
+    setCachedManufacturerStatus,
+    invalidateManufacturerStatus,
+} from '../services/redis.service.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const BCRYPT_ROUNDS   = 12;
@@ -200,6 +204,19 @@ export const loginController = async (req, res) => {
 
         console.log(`[manufacturer-service Auth] Login successful: ${manufacturer.manufacturerId} (${manufacturer.companyName})`);
 
+        // Cache status in Redis with 20-minute sliding TTL
+        await setCachedManufacturerStatus(manufacturer.manufacturerId, {
+            manufacturerId: manufacturer.manufacturerId,
+            companyName:    manufacturer.companyName,
+            licenseNumber:  manufacturer.licenseNumber,
+            email:          manufacturer.email,
+            kycStatus:      manufacturer.kycStatus,
+            blockedReason:  manufacturer.blockedReason,
+            blockedAt:      manufacturer.blockedAt,
+            publicKeyPem:   manufacturer.publicKeyPem,
+            keyId:          manufacturer.keyId,
+        }, 20 * 60);
+
         res.cookie('mfr_token', token, {
             httpOnly: true,
             secure:   process.env.NODE_ENV === 'production',
@@ -312,6 +329,17 @@ export const kycApproveController = async (req, res) => {
         manufacturer.verifiedAt = new Date();
         await manufacturer.save();
 
+        // Update Redis status to APPROVED
+        await setCachedManufacturerStatus(manufacturer.manufacturerId, {
+            manufacturerId: manufacturer.manufacturerId,
+            companyName:    manufacturer.companyName,
+            licenseNumber:  manufacturer.licenseNumber,
+            email:          manufacturer.email,
+            kycStatus:      'APPROVED',
+            publicKeyPem:   manufacturer.publicKeyPem,
+            keyId:          manufacturer.keyId,
+        }, 20 * 60);
+
         console.log(`[manufacturer-service Auth] KYC status successfully updated to APPROVED for ${manufacturer.manufacturerId} (${manufacturer.companyName}) at ${manufacturer.verifiedAt}`);
 
         return res.status(200).json({
@@ -374,6 +402,16 @@ export const kycRejectController = async (req, res) => {
         manufacturer.rejectionReason = reason || 'KYC application rejected by regulatory authority.';
         await manufacturer.save();
 
+        // Update Redis cache immediately
+        await setCachedManufacturerStatus(manufacturer.manufacturerId, {
+            manufacturerId: manufacturer.manufacturerId,
+            companyName:    manufacturer.companyName,
+            licenseNumber:  manufacturer.licenseNumber,
+            email:          manufacturer.email,
+            kycStatus:      'REJECTED',
+            rejectionReason: manufacturer.rejectionReason,
+        }, 20 * 60);
+
         console.log(`[manufacturer-service Auth] KYC status updated to REJECTED for ${manufacturer.manufacturerId} (${manufacturer.companyName})`);
 
         return res.status(200).json({
@@ -433,6 +471,17 @@ export const kycBlockController = async (req, res) => {
         manufacturer.blockedAt = new Date();
         manufacturer.blockedBy = adminId || 'CDSCO Regulatory Admin';
         await manufacturer.save();
+
+        // Update Redis status immediately so active requests fail with 403 in < 1ms
+        await setCachedManufacturerStatus(manufacturer.manufacturerId, {
+            manufacturerId: manufacturer.manufacturerId,
+            companyName:    manufacturer.companyName,
+            licenseNumber:  manufacturer.licenseNumber,
+            email:          manufacturer.email,
+            kycStatus:      'BLOCKED',
+            blockedReason:  manufacturer.blockedReason,
+            blockedAt:      manufacturer.blockedAt,
+        }, 20 * 60);
 
         console.log(`[manufacturer-service Auth] Manufacturer BLOCKED successfully: ${manufacturer.manufacturerId} (${manufacturer.companyName}) at ${manufacturer.blockedAt}`);
 
@@ -496,6 +545,19 @@ export const kycUnblockController = async (req, res) => {
         manufacturer.blockedAt = null;
         manufacturer.blockedBy = null;
         await manufacturer.save();
+
+        // Restore Redis status immediately to APPROVED
+        await setCachedManufacturerStatus(manufacturer.manufacturerId, {
+            manufacturerId: manufacturer.manufacturerId,
+            companyName:    manufacturer.companyName,
+            licenseNumber:  manufacturer.licenseNumber,
+            email:          manufacturer.email,
+            kycStatus:      'APPROVED',
+            blockedReason:  null,
+            blockedAt:      null,
+            publicKeyPem:   manufacturer.publicKeyPem,
+            keyId:          manufacturer.keyId,
+        }, 20 * 60);
 
         console.log(`[manufacturer-service Auth] Manufacturer UNBLOCKED successfully: ${manufacturer.manufacturerId} (${manufacturer.companyName})`);
 
@@ -789,6 +851,43 @@ export const getManufacturerPublicKeyController = async (req, res) => {
         });
     } catch (error) {
         console.error('[manufacturer-service Auth] getManufacturerPublicKeyController error:', error.message);
+        return res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+/**
+ * Returns all active and historical certified public keys for all approved manufacturers.
+ * Used by pharma-core to bootstrap and synchronize its keystore on startup.
+ */
+export const getAllPublicKeysController = async (_req, res) => {
+    try {
+        const manufacturers = await Manufacturer.find({
+            kycStatus: 'APPROVED',
+            $or: [
+                { publicKeyPem: { $ne: null } },
+                { 'publicKeys.0': { $exists: true } },
+            ],
+        }).select('manufacturerId keyId publicKeyPem publicKeys companyName createdAt').lean();
+
+        const data = {};
+        for (const mfr of manufacturers) {
+            const keys = [mfr.publicKeyPem, ...(Array.isArray(mfr.publicKeys) ? mfr.publicKeys : [])].filter(Boolean);
+            data[mfr.manufacturerId] = {
+                publicKeyPem: mfr.publicKeyPem || keys[0] || null,
+                publicKeys: Array.from(new Set(keys)),
+                keyId: mfr.keyId || `mfr-key-${mfr.manufacturerId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                companyName: mfr.companyName,
+                createdAt: mfr.createdAt,
+            };
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            count: Object.keys(data).length,
+            data,
+        });
+    } catch (error) {
+        console.error('[manufacturer-service Auth] getAllPublicKeysController error:', error.message);
         return res.status(500).json({ status: 'error', message: error.message });
     }
 };

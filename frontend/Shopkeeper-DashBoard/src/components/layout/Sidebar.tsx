@@ -16,6 +16,7 @@ import {
   Store,
   User,
   ShieldAlert,
+  X,
 } from 'lucide-react';
 import { NavRoute } from '../../types';
 
@@ -26,7 +27,12 @@ interface NavItemConfig {
   badge?: number | string;
 }
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen = false, onMobileClose }) => {
   const {
     activeRoute,
     navigateTo,
@@ -74,7 +80,7 @@ export const Sidebar: React.FC = () => {
     },
   ];
 
-  return (
+  const asideContent = (
     <aside
       className={`relative z-20 flex flex-col justify-between h-screen border-r border-[var(--border)] bg-[var(--bg-surface)] transition-all duration-300 select-none ${
         isSidebarCollapsed ? 'w-16' : 'w-64'
@@ -106,9 +112,21 @@ export const Sidebar: React.FC = () => {
             )}
           </div>
 
+          {/* Mobile Close Button */}
+          {onMobileClose && (
+            <button
+              onClick={onMobileClose}
+              className="lg:hidden p-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-element)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0"
+              aria-label="Close navigation menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Desktop Toggle Button */}
           <button
             onClick={toggleSidebar}
-            className={`p-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-element)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0 ${
+            className={`hidden lg:flex p-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-element)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer shrink-0 ${
               isSidebarCollapsed ? 'mt-1' : ''
             }`}
             title={isSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
@@ -128,10 +146,13 @@ export const Sidebar: React.FC = () => {
             return (
               <button
                 key={item.id}
-                onClick={() => navigateTo(item.id)}
+                onClick={() => {
+                  navigateTo(item.id);
+                  onMobileClose?.();
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${
                   isActive
-                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+                    ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-element)]'
                 } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
                 title={isSidebarCollapsed ? item.label : undefined}
@@ -215,5 +236,28 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <div className="hidden lg:flex h-screen flex-shrink-0">
+        {asideContent}
+      </div>
+
+      {/* Mobile Slide-over Drawer with Backdrop */}
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            onClick={onMobileClose}
+            aria-hidden="true"
+          />
+          <div className="relative z-50 flex h-full max-w-[264px] w-full shadow-2xl animate-slideRight">
+            {asideContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 };

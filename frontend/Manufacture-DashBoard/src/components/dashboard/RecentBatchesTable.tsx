@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboard } from '../../features/dashboard/Hooks/dashboard.hooks';
 import { useToast } from '../../context/ToastContext';
 import { Batch } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export const RecentBatchesTable: React.FC = () => {
-  const { batches, setSelectedBatch, setActiveNav, setBatchToRecall, setIsRecallModalOpen } =
+  const { batches, setSelectedBatch, setActiveNav, navigateTo, setBatchToRecall, setIsRecallModalOpen } =
     useDashboard();
   const { showToast } = useToast();
   const [actionMenuBatchId, setActionMenuBatchId] = useState<string | null>(null);
@@ -80,10 +80,10 @@ export const RecentBatchesTable: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="table-scroll-container max-h-[460px] rounded-b-2xl">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+          <thead className="sticky top-0 z-10 shadow-xs">
+            <tr className="bg-slate-50/95 backdrop-blur-md border-b border-slate-200/80 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
               <th className="px-4 py-3">Batch ID</th>
               <th className="px-4 py-3">Medicine & Strength</th>
               <th className="px-4 py-3">Mfg Date</th>
@@ -99,7 +99,10 @@ export const RecentBatchesTable: React.FC = () => {
             {batches.slice(0, 6).map((batch) => (
               <tr
                 key={batch.id}
-                onClick={() => setSelectedBatch(batch)}
+                onClick={() => {
+                  setSelectedBatch(batch);
+                  navigateTo('batch-detail');
+                }}
                 className="hover:bg-brand-50/40 cursor-pointer transition-colors group"
               >
                 {/* Batch ID */}
@@ -177,9 +180,10 @@ export const RecentBatchesTable: React.FC = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedBatch(batch);
+                        navigateTo('batch-detail');
                       }}
-                      title="View batch provenance & pack details"
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                      title="View end-to-end batch provenance & pack details"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </button>

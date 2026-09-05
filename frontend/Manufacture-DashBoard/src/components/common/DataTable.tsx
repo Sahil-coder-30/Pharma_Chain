@@ -132,10 +132,10 @@ export function DataTable<T>({
       )}
 
       {/* Table Body */}
-      <div className="overflow-x-auto">
+      <div className="table-scroll-container max-h-[580px]">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[var(--bg-element)] border-b border-[var(--border)] text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+          <thead className="sticky top-0 z-10 shadow-xs">
+            <tr className="bg-[var(--bg-element)]/95 backdrop-blur-md border-b border-[var(--border)] text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
               {columns.map((col) => (
                 <th
                   key={col.key}

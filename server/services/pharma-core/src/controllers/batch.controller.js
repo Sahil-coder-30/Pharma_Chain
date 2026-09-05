@@ -1,5 +1,6 @@
 import { mintAndUploadBatch } from '../services/crypto.service.js';
 import { submitTransitionBatchChunked } from '../services/backendClient.service.js';
+import { getISTDateString, getISTTimeString, getISTISOString } from '../utils/time.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MAX_QUANTITY = 100_000;
@@ -148,8 +149,8 @@ export const retryBlockchainSyncController = async (req, res) => {
         }
 
         const now = new Date();
-        const sellingDate = now.toISOString().split('T')[0];
-        const sellingTime = now.toTimeString().split(' ')[0];
+        const sellingDate = getISTDateString(now);
+        const sellingTime = getISTTimeString(now);
 
         const transitions = rows.map((r) => ({
             packId:      r.packHash,
@@ -173,7 +174,7 @@ export const retryBlockchainSyncController = async (req, res) => {
             blockchainStatus: 'COMMITTED',
             blockchainRecorded: recordedHashes.length,
             totalPacks: transitions.length,
-            syncedAt: new Date().toISOString(),
+            syncedAt: getISTISOString(),
         });
     } catch (error) {
         console.error(`[pharma-core Batch] ❌ retryBlockchainSyncController error:`, error.message);

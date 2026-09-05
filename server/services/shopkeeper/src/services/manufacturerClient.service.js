@@ -29,3 +29,17 @@ export const getPublicBatchMetadata = async (batchId) => {
         return null;
     }
 };
+
+/**
+ * Fetches all CDSCO and manufacturer recalled batches.
+ */
+export const getAllRecalls = async () => {
+    try {
+        const response = await getManufacturerClient().get('/api/manufacturer/batch/public/recalls/all');
+        return response.data?.data || [];
+    } catch (err) {
+        console.warn(`[shopkeeper-service MfgClient] Failed to fetch recalls: ${err.message}`);
+        return [];
+    }
+};
+

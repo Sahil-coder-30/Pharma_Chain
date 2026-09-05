@@ -10,6 +10,9 @@ import {
   setCurrentScanResult,
   setInventory,
   setSales,
+  setInbounds,
+  setRecalls,
+  setFraudReports,
   addToCart,
   removeFromCart,
   clearCart,
@@ -24,7 +27,7 @@ import {
   setDashboardLoading,
   setDashboardError,
 } from '../slice/dashboard.slice';
-import { shopkeeperApi } from '../services/shopkeeper.api';
+import { shopkeeperApi, getISTISOString } from '../services/shopkeeper.api';
 import { NavRoute, ScanMode, POSCartItem, SaleTransaction } from '../../../types';
 import { useToast } from '../../../context/ToastContext';
 
@@ -59,6 +62,47 @@ export const useDashboard = () => {
     [dispatch, state.theme]
   );
 
+  // Live Inventory, Sales, Inbounds, Recalls Fetching
+  const refreshInventory = useCallback(async () => {
+    try {
+      const items = await shopkeeperApi.getInventory();
+      dispatch(setInventory(items));
+      return items;
+    } catch (err: any) {
+      console.warn('[Dashboard Hook] refreshInventory error:', err.message);
+    }
+  }, [dispatch]);
+
+  const refreshSales = useCallback(async () => {
+    try {
+      const sales = await shopkeeperApi.getSalesHistory();
+      dispatch(setSales(sales));
+      return sales;
+    } catch (err: any) {
+      console.warn('[Dashboard Hook] refreshSales error:', err.message);
+    }
+  }, [dispatch]);
+
+  const refreshInbounds = useCallback(async () => {
+    try {
+      const inbounds = await shopkeeperApi.getInbounds();
+      dispatch(setInbounds(inbounds));
+      return inbounds;
+    } catch (err: any) {
+      console.warn('[Dashboard Hook] refreshInbounds error:', err.message);
+    }
+  }, [dispatch]);
+
+  const refreshRecalls = useCallback(async () => {
+    try {
+      const recalls = await shopkeeperApi.getRecalls();
+      dispatch(setRecalls(recalls));
+      return recalls;
+    } catch (err: any) {
+      console.warn('[Dashboard Hook] refreshRecalls error:', err.message);
+    }
+  }, [dispatch]);
+
   // Scan & Verify Token / QR
   const verifyScan = useCallback(
     async (scannedText: string, mode: ScanMode = state.activeScanMode) => {
@@ -81,15 +125,15 @@ export const useDashboard = () => {
               addToCart({
                 packHash: res.packHash,
                 signedToken: res.signedToken || scannedText,
-                batchId: res.batchId || 'BATCH-2026-005',
+                batchId: res.batchId || 'BATCH-LIVE',
                 medicineName: res.medicineName,
                 genericName: res.genericName || '',
                 dosage: res.dosage || '',
                 unitMrp: res.unitMrp || 150.0,
                 expiryDate: res.expiryDate || '2028-02-01',
-                manufacturerName: res.manufacturerName || 'MedCore Pharma',
+                manufacturerName: res.manufacturerName || 'Licensed Pharma Manufacturer',
                 quantity: 1,
-                scannedAt: new Date().toISOString(),
+                scannedAt: getISTISOString(),
                 status: 'VALID',
               })
             );
@@ -153,6 +197,10 @@ export const useDashboard = () => {
           message: `Sale committed to Hyperledger Fabric (Block #${res.blockNumber}).`,
         });
 
+        // Background refresh inventory and sales
+        refreshInventory();
+        refreshSales();
+
         return res;
       } catch (err: any) {
         dispatch(setDashboardLoading(false));
@@ -164,7 +212,7 @@ export const useDashboard = () => {
         throw err;
       }
     },
-    [dispatch, showToast, state.cartItems]
+    [dispatch, showToast, state.cartItems, refreshInventory, refreshSales]
   );
 
   // Inbound Delivery Intake
@@ -184,12 +232,12 @@ export const useDashboard = () => {
           id: `intk_${Date.now().toString().slice(-4)}`,
           deliveryChallanNo: payload.deliveryChallanNo,
           distributorName: payload.distributorName,
-          batchId: payload.batchId || 'BATCH-2026-005',
-          medicineName: payload.medicineName || 'Pantoprazole Gastro-Resistant 40mg',
+          batchId: payload.batchId || 'BATCH-LIVE',
+          medicineName: payload.medicineName || 'Prescription Medicine',
           packsReceived: payload.packsReceived,
           signatureVerified: true,
           fabricTxId: res.fabricTxId,
-          timestamp: new Date().toISOString(),
+          timestamp: getISTISOString(),
           status: 'SUCCESS' as const,
         };
 
@@ -201,6 +249,10 @@ export const useDashboard = () => {
           title: 'Delivery Stock Received',
           message: `+${payload.packsReceived} units added to live inventory (State -> AT_SHOP).`,
         });
+
+        // Refresh inventory and inbounds
+        refreshInventory();
+        refreshInbounds();
       } catch (err: any) {
         dispatch(setDashboardLoading(false));
         showToast({
@@ -210,29 +262,8 @@ export const useDashboard = () => {
         });
       }
     },
-    [dispatch, showToast]
+    [dispatch, showToast, refreshInventory, refreshInbounds]
   );
-
-  // Live Inventory & Sales Fetching
-  const refreshInventory = useCallback(async () => {
-    try {
-      const items = await shopkeeperApi.getInventory();
-      dispatch(setInventory(items));
-      return items;
-    } catch (err: any) {
-      console.warn('[Dashboard Hook] refreshInventory error:', err.message);
-    }
-  }, [dispatch]);
-
-  const refreshSales = useCallback(async () => {
-    try {
-      const sales = await shopkeeperApi.getSalesHistory();
-      dispatch(setSales(sales));
-      return sales;
-    } catch (err: any) {
-      console.warn('[Dashboard Hook] refreshSales error:', err.message);
-    }
-  }, [dispatch]);
 
   return {
     ...state,
@@ -247,6 +278,8 @@ export const useDashboard = () => {
     submitInboundIntake,
     refreshInventory,
     refreshSales,
+    refreshInbounds,
+    refreshRecalls,
     addToCart: (item: POSCartItem) => dispatch(addToCart(item)),
     removeFromCart: (hash: string) => dispatch(removeFromCart(hash)),
     clearCart: () => dispatch(clearCart()),

@@ -108,33 +108,6 @@ export default function ScanScreen() {
     }, 700);
   };
 
-  const handleDemoScan = (status: 'authentic' | 'suspicious') => {
-    if (scanned) return;
-    setScanned(true);
-    triggerHaptic();
-
-    setVerifyingModal(
-      status === 'authentic'
-        ? 'Scanning 2D Matrix & Loading Medicine Journey...'
-        : 'Flagging Mismatch with CDSCO Database...'
-    );
-
-    setTimeout(() => {
-      setVerifyingModal(null);
-      setScanned(false);
-      router.push({
-        pathname: '/scan-result',
-        params: {
-          status,
-          qrData:
-            status === 'authentic'
-              ? 'PC-JWT-GENUINE-BATCH-PCM-2026-SUNPHARMA'
-              : 'PC-JWT-FLAGGED-INVALID-SIGNATURE',
-        },
-      });
-    }, 600);
-  };
-
   if (!permission) {
     return <View style={styles.container} />;
   }
@@ -167,6 +140,9 @@ export default function ScanScreen() {
         style={StyleSheet.absoluteFillObject}
         facing="back"
         enableTorch={torchOn}
+        barcodeScannerSettings={{
+          barcodeTypes: ['qr', 'datamatrix'],
+        }}
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
       />
 
@@ -238,27 +214,6 @@ export default function ScanScreen() {
 
         {/* Bottom Interactive Controls */}
         <View style={styles.bottomSection}>
-          {/* Quick Demo Verification Buttons */}
-          <View style={styles.demoButtonsRow}>
-            <TouchableOpacity
-              style={styles.demoBtnSuccess}
-              onPress={() => handleDemoScan('authentic')}
-              activeOpacity={0.85}
-            >
-              <Sparkles size={16} color="#ffffff" />
-              <Text style={styles.demoBtnTextSuccess}>Test Genuine Scan</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.demoBtnWarning}
-              onPress={() => handleDemoScan('suspicious')}
-              activeOpacity={0.85}
-            >
-              <AlertTriangle size={15} color="#fed7aa" />
-              <Text style={styles.demoBtnTextWarning}>Test Flagged</Text>
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.securityFooterBadge}>
             <ShieldCheck size={13} color="#FF5342" />
             <Text style={styles.securityFooterText}>
@@ -538,7 +493,10 @@ const styles = StyleSheet.create({
   },
   hudOverlay: {
     position: 'absolute',
-    inset: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',

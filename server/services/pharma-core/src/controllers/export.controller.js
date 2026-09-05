@@ -1,7 +1,5 @@
-import { existsSync, readFileSync } from 'fs';
-import { createReadStream } from 'fs';
-import { getLocalExportPath, isS3Configured } from '../services/s3.service.js';
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { isS3Configured, getS3Client } from '../services/s3.service.js';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -44,51 +42,46 @@ export const parseCsv = (csvText) => {
 };
 
 /**
- * Reads the raw CSV text for a batch.
- * - Local mode: reads from ./data/exports/{batchId}.csv
- * - S3 mode:   fetches from S3 using the provided s3FileKey
+ * Reads raw CSV text for a batch exclusively from AWS S3.
+ * Throws an explicit error if S3 is not configured or if object is not found.
  *
  * @param {string} batchId
- * @param {string|null} s3FileKey  - S3 object key (null in local mode)
+ * @param {string|null} s3FileKey  - S3 object key (defaults to batches/{batchId}.csv)
  * @returns {Promise<string>}       Raw CSV text
  */
 export const readCsvContent = async (batchId, s3FileKey) => {
-    // 1. Try S3 if configured
-    if (isS3Configured()) {
-        const key = (s3FileKey && !s3FileKey.startsWith('local:')) ? s3FileKey : `batches/${batchId}.csv`;
-        try {
-            const s3 = new S3Client({
-                region:      process.env.AWS_REGION || 'us-east-1',
-                credentials: {
-                    accessKeyId:     process.env.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-                },
-            });
+    if (!isS3Configured()) {
+        throw new Error('[pharma-core S3] AWS S3 is not configured. Batches are stored exclusively in AWS S3.');
+    }
 
-            const command = new GetObjectCommand({
-                Bucket: process.env.S3_BUCKET_NAME,
-                Key:    key,
-            });
+    const rawKey = s3FileKey;
+    const key = (rawKey && !rawKey.startsWith('local:') && rawKey.startsWith('batches/'))
+        ? rawKey
+        : `batches/${batchId}.csv`;
 
-            const response = await s3.send(command);
+    const s3 = getS3Client();
+    if (!s3) {
+        throw new Error('[pharma-core S3] AWS S3 client is unavailable');
+    }
 
-            const chunks = [];
-            for await (const chunk of response.Body) {
-                chunks.push(chunk);
-            }
-            return Buffer.concat(chunks).toString('utf-8');
-        } catch (s3Err) {
-            console.warn(`[pharma-core S3] S3 fetch attempt for key [${key}] notice: ${s3Err.message}`);
+    const command = new GetObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key:    key,
+    });
+
+    try {
+        const response = await s3.send(command);
+        const chunks = [];
+        for await (const chunk of response.Body) {
+            chunks.push(chunk);
         }
+        return Buffer.concat(chunks).toString('utf-8');
+    } catch (s3Err) {
+        if (s3Err.name === 'NoSuchKey' || s3Err.$metadata?.httpStatusCode === 404) {
+            throw new Error(`CSV artifact not found in AWS S3 for batch: ${batchId}`);
+        }
+        throw new Error(`AWS S3 fetch failed for key [${key}]: ${s3Err.message}`);
     }
-
-    // 2. Read from local disk (dev fallback)
-    const filePath = getLocalExportPath(batchId);
-    if (existsSync(filePath)) {
-        return readFileSync(filePath, 'utf-8');
-    }
-
-    throw new Error(`CSV file not found for batch: ${batchId}`);
 };
 
 // ── Controllers ───────────────────────────────────────────────────────────────
@@ -96,90 +89,68 @@ export const readCsvContent = async (batchId, s3FileKey) => {
 /**
  * GET /core/export/:batchId
  *
- * Local-fallback CSV download endpoint.
- * Active ONLY when AWS credentials are not configured (dev / offline mode).
- *
- * In production (AWS configured):
- *   - This route is never called; factory printers download directly from the S3 pre-signed URL.
- *
- * In development (no AWS creds):
- *   - Serves the CSV file generated during minting directly from disk.
+ * Streams batch CSV manifest directly from AWS S3.
+ * Exclusively reads from AWS S3. Throws explicit error when S3 is unavailable or artifact is missing.
  *
  * @param {import('express').Request}  req
  * @param {import('express').Response} res
  */
-export const localExportDownloadController = async (req, res) => {
+export const exportBatchCsvController = async (req, res) => {
     const { batchId } = req.params;
 
     if (!batchId || !/^[\w\-]+$/.test(batchId)) {
         return res.status(400).json({ code: 'INVALID_BATCH_ID', message: 'batchId is invalid or malformed' });
     }
 
-    // 1. Check AWS S3 first if configured
-    if (isS3Configured()) {
-        const s3Key = req.query.s3FileKey || `batches/${batchId}.csv`;
-        try {
-            const s3Client = new S3Client({
-                region: process.env.AWS_REGION || 'us-east-1',
-                credentials: {
-                    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-                },
-            });
-
-            const command = new GetObjectCommand({
-                Bucket: process.env.S3_BUCKET_NAME,
-                Key: s3Key,
-            });
-
-            const s3Response = await s3Client.send(command);
-
-            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-            res.setHeader('Content-Disposition', `attachment; filename="${batchId}.csv"`);
-            res.setHeader('X-Export-Mode', 's3');
-
-            return s3Response.Body.pipe(res);
-        } catch (s3Err) {
-            console.warn(`[pharma-core Export] S3 stream attempt failed for ${batchId}:`, s3Err.message);
-        }
+    if (!isS3Configured()) {
+        return res.status(503).json({
+            code: 'S3_NOT_CONFIGURED',
+            message: 'AWS S3 storage is not configured. Batches are stored exclusively in AWS S3.',
+        });
     }
 
-    // 2. Check local disk fallback
-    const filePath = getLocalExportPath(batchId);
+    const rawKey = req.query.s3FileKey;
+    const s3Key = (rawKey && !rawKey.startsWith('local:') && rawKey.startsWith('batches/'))
+        ? rawKey
+        : `batches/${batchId}.csv`;
 
-    if (existsSync(filePath)) {
-        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-        res.setHeader('Content-Disposition', `attachment; filename="${batchId}.csv"`);
-        res.setHeader('X-Export-Mode', 'local-fallback');
-
-        const fileStream = createReadStream(filePath);
-
-        fileStream.on('error', (err) => {
-            console.error(`[pharma-core Export] Stream error for ${batchId}:`, err.message);
-            if (!res.headersSent) {
-                res.status(500).json({ code: 'STREAM_ERROR', message: err.message });
-            }
+    try {
+        const s3Client = getS3Client();
+        const command = new GetObjectCommand({
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key:    s3Key,
         });
 
-        return fileStream.pipe(res);
-    }
+        const s3Response = await s3Client.send(command);
 
-    return res.status(404).json({
-        code: 'FILE_NOT_FOUND',
-        message: `CSV file not found for batch ${batchId}. The batch artifact may not have been minted yet or was purged.`,
-    });
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${batchId}.csv"`);
+        res.setHeader('X-Export-Mode', 's3');
+
+        return s3Response.Body.pipe(res);
+    } catch (s3Err) {
+        console.warn(`[pharma-core Export] S3 stream attempt failed for ${batchId} (key: ${s3Key}):`, s3Err.message);
+        if (s3Err.name === 'NoSuchKey' || s3Err.$metadata?.httpStatusCode === 404) {
+            return res.status(404).json({
+                code: 'S3_ARTIFACT_NOT_FOUND',
+                message: `CSV artifact for batch ${batchId} was not found in AWS S3 bucket (${process.env.S3_BUCKET_NAME}).`,
+            });
+        }
+        return res.status(502).json({
+            code: 'S3_STREAM_FAILED',
+            message: `Failed to stream batch CSV from AWS S3: ${s3Err.message}`,
+        });
+    }
 };
 
-export const exportBatchCsvController = localExportDownloadController;
+// Backward-compatible alias
+export const localExportDownloadController = exportBatchCsvController;
 
 /**
  * GET /core/export/:batchId/preview
  *
- * Internal API that reads the batch CSV (from local disk or S3) and returns
+ * Internal API that reads the batch CSV from AWS S3 and returns
  * paginated, searchable JSON data for the manufacturer dashboard UI preview page.
- *
- * This endpoint is called by manufacturer-service — NOT by the browser directly.
- * manufacturer-service's /api/manufacturer/batch/:batchId/preview proxies this.
  *
  * Query Parameters:
  *   - page:   number  (default: 1)
@@ -187,7 +158,7 @@ export const exportBatchCsvController = localExportDownloadController;
  *   - search: string  (optional — filters by serialNumber or packHash prefix)
  *
  * Query body (POST body):
- *   - s3FileKey: string (optional — required for S3 mode to fetch the right object)
+ *   - s3FileKey: string (optional — S3 object key)
  */
 export const exportPreviewController = async (req, res) => {
     try {
@@ -204,33 +175,27 @@ export const exportPreviewController = async (req, res) => {
             });
         }
 
-        // ── Read & parse the CSV ──────────────────────────────────────────────
+        if (!isS3Configured()) {
+            return res.status(503).json({
+                code: 'S3_NOT_CONFIGURED',
+                message: 'AWS S3 storage is not configured. Batches are stored exclusively in AWS S3.',
+            });
+        }
+
+        // ── Read & parse CSV strictly from S3 ────────────────────────────────
         let csvText;
         try {
             csvText = await readCsvContent(batchId, s3FileKey);
         } catch (readErr) {
-            console.warn(`[pharma-core Export] CSV artifact not found for ${batchId}: ${readErr.message}. Returning empty preview.`);
-            return res.status(200).json({
-                status:  'success',
-                batchId,
-                s3Mode:  'local',
-                stats: {
-                    totalPacks:    0,
-                    filteredPacks: 0,
-                    csvSizeBytes:  0,
-                },
-                meta: {
-                    page,
-                    limit,
-                    pages: 0,
-                    total: 0,
-                },
-                packs: [],
-                notice: 'CSV artifact is not cached locally or on S3 for this batch.',
+            console.warn(`[pharma-core Export] CSV artifact not found in S3 for ${batchId}: ${readErr.message}`);
+            return res.status(404).json({
+                code:    'S3_ARTIFACT_NOT_FOUND',
+                message: `CSV artifact for batch ${batchId} was not found in AWS S3.`,
+                details: readErr.message,
             });
         }
 
-        const allRows    = parseCsv(csvText);
+        const allRows      = parseCsv(csvText);
         const csvSizeBytes = Buffer.byteLength(csvText, 'utf-8');
 
         // ── Apply search filter ───────────────────────────────────────────────
@@ -257,13 +222,8 @@ export const exportPreviewController = async (req, res) => {
             verifyUrl:    r.verifyUrl    || '',
             medicineName: r.medicineName || '',
             expiryDate:   r.expiryDate   || '',
-            // qrPreviewUrl is the URL to embed in a QR code image on the dashboard
             qrPreviewUrl: r.verifyUrl    || '',
         }));
-
-        const s3Mode = (isS3Configured() && s3FileKey && !s3FileKey.startsWith('local:'))
-            ? 'aws'
-            : 'local';
 
         console.log(
             `[pharma-core Export] Preview: ${batchId} | ` +
@@ -273,7 +233,7 @@ export const exportPreviewController = async (req, res) => {
         return res.status(200).json({
             status:  'success',
             batchId,
-            s3Mode,
+            s3Mode:  'aws',
             stats: {
                 totalPacks:    allRows.length,
                 filteredPacks: filtered.length,

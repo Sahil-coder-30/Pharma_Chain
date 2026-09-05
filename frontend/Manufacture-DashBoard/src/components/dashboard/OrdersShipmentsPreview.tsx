@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDashboard } from '../../context/DashboardContext';
+import { useDashboard } from '../../features/dashboard/Hooks/dashboard.hooks';
 import { StatusBadge } from '../common/StatusBadge';
 import { ShoppingCart, Truck, ArrowRight, Building2 } from 'lucide-react';
 

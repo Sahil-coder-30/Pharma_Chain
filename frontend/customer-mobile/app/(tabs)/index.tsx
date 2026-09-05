@@ -40,7 +40,7 @@ export default function CustomerHomeDashboard() {
   const { savedMedicines } = useCustomerStore();
   const { user } = useAuthStore();
 
-  const userName = (user as any)?.displayName || 'Himanshu';
+  const userName = user?.name || (user as any)?.displayName || user?.email?.split('@')[0] || 'Patient';
   const avatarLetter = userName.charAt(0).toUpperCase();
 
   const [selectedAlert, setSelectedAlert] = useState<SafetyAlert | null>(null);
@@ -222,7 +222,12 @@ export default function CustomerHomeDashboard() {
           ) : (
             <View style={styles.medicineList}>
               {savedMedicines.slice(0, 3).map((med) => (
-                <View key={med.id} style={styles.medicineCard}>
+                <TouchableOpacity
+                  key={med.id}
+                  style={styles.medicineCard}
+                  onPress={() => setSelectedMedicine(med)}
+                  activeOpacity={0.8}
+                >
                   <View style={styles.medicineCardLeft}>
                     <View style={styles.medicineIconCircle}>
                       <Pill size={20} color="#ea580c" />
@@ -244,7 +249,7 @@ export default function CustomerHomeDashboard() {
                     <ShieldCheck size={13} color="#c2410c" />
                     <Text style={styles.verifiedBadgeText}>Verified</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           )}

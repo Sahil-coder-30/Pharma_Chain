@@ -109,7 +109,10 @@ export const normalizeBackendManufacturer = (raw: any): ManufacturerProfile => {
         phone: raw.phone || '',
       },
     ],
-    registeredAt: raw.createdAt ? new Date(raw.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    registeredAt: (() => {
+      const d = raw.createdAt ? new Date(raw.createdAt) : new Date();
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(isNaN(d.getTime()) ? new Date() : d);
+    })(),
     gstin: raw.gstin || '',
     cdscoRegistration: raw.cdscoRegistration || licenseNumber,
     blockedReason: raw.blockedReason || undefined,

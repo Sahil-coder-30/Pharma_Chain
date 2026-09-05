@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/auth.hooks';
+import { authApi } from '../services/auth.api';
 import {
   Store,
   FileCheck2,
@@ -7,17 +8,16 @@ import {
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
-  Building,
-  User,
-  ShieldCheck,
+  Lock,
 } from 'lucide-react';
 import { useToast } from '../../../context/ToastContext';
 
 export const RegisterWizard: React.FC = () => {
-  const { setAuthView, switchDemoAccount } = useAuth();
+  const { setAuthView } = useAuth();
   const { showToast } = useToast();
 
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     shopName: '',
     ownerName: '',
@@ -30,20 +30,65 @@ export const RegisterWizard: React.FC = () => {
     city: '',
     state: '',
     pincode: '',
+    password: '',
+    confirmPassword: '',
   });
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step < 3) {
       setStep(step + 1);
-    } else {
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      showToast({
+        type: 'error',
+        title: 'Password Too Short',
+        message: 'Password must be at least 8 characters.',
+      });
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      showToast({
+        type: 'error',
+        title: 'Password Mismatch',
+        message: 'Password and confirmation do not match.',
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await authApi.register({
+        shopName: formData.shopName.trim(),
+        ownerName: formData.ownerName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        licenseNumber: formData.licenseNumber.trim(),
+        gstin: formData.gstin.trim(),
+        pharmacistRegNo: formData.pharmacistRegNo.trim(),
+        address: formData.address.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        pincode: formData.pincode.trim(),
+        password: formData.password,
+      });
+
       showToast({
         type: 'success',
         title: 'Pharmacy Application Submitted',
-        message: 'CDSCO Drug Inspector has been notified for Form 20/21 verification.',
+        message: 'Registration submitted to CDSCO Drug Inspector for Form 20/21 verification.',
       });
-      switchDemoAccount('PENDING');
       setAuthView('pending-kyc');
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Registration Error',
+        message: err.response?.data?.message || err.message || 'Registration failed',
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -101,7 +146,7 @@ export const RegisterWizard: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold text-[var(--text-primary)] mb-1">Official Email</label>
+                <label className="block font-semibold text-[var(--text-primary)] mb-1">Email (Official)</label>
                 <input
                   required
                   type="email"
@@ -112,7 +157,7 @@ export const RegisterWizard: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block font-semibold text-[var(--text-primary)] mb-1">Phone Number</label>
+                <label className="block font-semibold text-[var(--text-primary)] mb-1">Mobile / Phone</label>
                 <input
                   required
                   type="tel"
@@ -129,7 +174,7 @@ export const RegisterWizard: React.FC = () => {
         {step === 2 && (
           <>
             <div>
-              <label className="block font-semibold text-[var(--text-primary)] mb-1">Retail Drug License No. (Form 20/21)</label>
+              <label className="block font-semibold text-[var(--text-primary)] mb-1">State Drug License Number (Form 20/21)</label>
               <input
                 required
                 type="text"
@@ -212,6 +257,31 @@ export const RegisterWizard: React.FC = () => {
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--border)]">
+              <div>
+                <label className="block font-semibold text-[var(--text-primary)] mb-1">Create Password</label>
+                <input
+                  required
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Min. 8 characters"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] text-[var(--text-primary)] focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-[var(--text-primary)] mb-1">Confirm Password</label>
+                <input
+                  required
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  placeholder="Repeat password"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] text-[var(--text-primary)] focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
           </>
         )}
 
@@ -219,8 +289,9 @@ export const RegisterWizard: React.FC = () => {
           {step > 1 ? (
             <button
               type="button"
+              disabled={submitting}
               onClick={() => setStep(step - 1)}
-              className="px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg-element)] text-[var(--text-primary)] flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--bg-element)] text-[var(--text-primary)] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back</span>
@@ -237,10 +308,17 @@ export const RegisterWizard: React.FC = () => {
 
           <button
             type="submit"
-            className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-sm ml-auto"
+            disabled={submitting}
+            className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1.5 cursor-pointer shadow-sm ml-auto disabled:opacity-50"
           >
-            <span>{step === 3 ? 'Submit for License Verification' : 'Next Step'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            {submitting ? (
+              <span>Submitting Application...</span>
+            ) : (
+              <>
+                <span>{step === 3 ? 'Submit for License Verification' : 'Next Step'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </>
+            )}
           </button>
         </div>
       </form>

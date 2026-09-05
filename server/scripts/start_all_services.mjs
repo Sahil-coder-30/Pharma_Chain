@@ -26,13 +26,15 @@ console.log('══════════════════════�
 console.log('🚀 Starting All PharmaChain Microservices Concurrently (Single Command)');
 console.log('═══════════════════════════════════════════════════════════════════════════════');
 
+process.env.TZ = 'Asia/Kolkata';
+
 services.forEach(svc => {
     const cwd = path.join(rootDir, svc.dir);
     console.log(`${svc.color}[${svc.name}] Launching on port ${svc.port}...${RESET}`);
 
     const child = spawn('node', ['server.js'], {
         cwd,
-        env: { ...process.env },
+        env: { ...process.env, TZ: 'Asia/Kolkata' },
         stdio: ['ignore', 'pipe', 'pipe'],
     });
 

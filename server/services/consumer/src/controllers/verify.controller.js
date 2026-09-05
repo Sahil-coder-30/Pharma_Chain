@@ -1,6 +1,7 @@
 import { verifyToken, getPackStatus } from '../services/coreClient.service.js';
 import { getPublicBatchMetadata } from '../services/manufacturerClient.service.js';
 import { getPublicShopkeeperProfile } from '../services/shopkeeperClient.service.js';
+import { getISTISOString, formatISTDateTime } from '../utils/time.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 // The 8 consumer UI verification states as defined in the architecture.
@@ -35,21 +36,21 @@ const parseSellingTimestamp = (detail) => {
         const day = dateStr.slice(0, 2);
         const month = dateStr.slice(2, 4);
         const year = dateStr.slice(4, 8);
-        const d = new Date(`${year}-${month}-${day}T${timeStr}Z`);
+        const d = new Date(`${year}-${month}-${day}T${timeStr}+05:30`);
         if (!isNaN(d.getTime())) return d;
     }
     // Format YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        const d = new Date(`${dateStr}T${timeStr}Z`);
+        const d = new Date(`${dateStr}T${timeStr}+05:30`);
         if (!isNaN(d.getTime())) return d;
     }
     // Format DD/MM/YYYY or DD-MM-YYYY
     if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(dateStr)) {
         const [day, month, year] = dateStr.split(/[\/\-]/);
-        const d = new Date(`${year}-${month}-${day}T${timeStr}Z`);
+        const d = new Date(`${year}-${month}-${day}T${timeStr}+05:30`);
         if (!isNaN(d.getTime())) return d;
     }
-    const fallback = new Date(`${dateStr} ${timeStr}`);
+    const fallback = new Date(`${dateStr} ${timeStr} GMT+0530`);
     return isNaN(fallback.getTime()) ? null : fallback;
 };
 
@@ -67,6 +68,7 @@ const formatRelativeTime = (diffMs) => {
 const formatSaleDateTime = (dateObj, detail) => {
     if (dateObj && !isNaN(dateObj.getTime())) {
         return dateObj.toLocaleDateString('en-IN', {
+            timeZone: 'Asia/Kolkata',
             day: '2-digit',
             month: 'short',
             year: 'numeric',
@@ -214,20 +216,26 @@ export const verifyQrController = async (req, res) => {
         // ── Provenance & Dispensing Shop Extraction ───────────────────────────
         const detail = statusResult.detail || {};
         const isSold = uiState === UI_STATE.ALREADY_SOLD || rawStatus === 'Sold' || rawStatus === 'SOLD' || detail.eventType === 'SOLD';
-        const isAtShop = uiState === UI_STATE.AT_SHOP || rawStatus === 'AtShop' || rawStatus === 'AT_SHOP' || detail.eventType === 'INTAKE' || detail.eventType === 'AT_SHOP';
+        const isAtShop = !isSold && (uiState === UI_STATE.AT_SHOP || rawStatus === 'AtShop' || rawStatus === 'AT_SHOP' || detail.eventType === 'INTAKE' || detail.eventType === 'AT_SHOP');
 
         let dispensingShop = (isSold || isAtShop || detail.shopName || detail.sellerId) ? {
-            shopId:        detail.sellerId || detail.toId || detail.fromId || null,
-            name:          detail.shopName || (detail.sellerId ? `Registered Pharmacy (${detail.sellerId})` : 'Registered Pharmacy'),
-            licenseNumber: detail.licenseNumber || 'CDSCO-APPROVED',
-            location:      detail.location || null,
-            latitude:      detail.latitude || null,
-            longitude:     detail.longitude || null,
-            address:       null,
-            phone:         null,
-            sellingDate:   detail.sellingDate || null,
-            sellingTime:   detail.sellingTime || null,
-            timestamp:     detail.timestamp || null,
+            shopId:              detail.sellerId || detail.toId || detail.fromId || null,
+            name:                detail.shopName || (detail.sellerId ? `Registered Pharmacy (${detail.sellerId})` : 'Registered Pharmacy'),
+            licenseNumber:       detail.licenseNumber || 'CDSCO-APPROVED',
+            location:            detail.location || null,
+            latitude:            detail.latitude || null,
+            longitude:           detail.longitude || null,
+            address:             null,
+            phone:               null,
+            isSold:              Boolean(isSold),
+            custodyState:        isSold ? 'SOLD' : isAtShop ? 'AT_SHOP' : 'MINTED',
+            intakeTime:          (isAtShop || detail.eventType === 'INTAKE') ? (detail.timestamp || null) : null,
+            formattedIntakeTime: (isAtShop || detail.eventType === 'INTAKE') && detail.timestamp ? formatSaleDateTime(new Date(detail.timestamp), detail) : null,
+            sellingDate:         isSold ? (detail.sellingDate || null) : null,
+            sellingTime:         isSold ? (detail.sellingTime || null) : null,
+            timestamp:           detail.timestamp || null,
+            formattedSaleTime:   null,
+            relativeSaleTime:    null,
         } : null;
 
         // ── Enrich pharmacy profile from shopkeeper-service if needed ─────────
@@ -287,24 +295,26 @@ export const verifyQrController = async (req, res) => {
 
         // ── Build Contextual Messages ─────────────────────────────────────────
         const shopDisplayName = dispensingShop?.name || 'Registered Pharmacy';
-        const formattedDate = dispensingShop?.formattedSaleTime || formatSaleDateTime(soldDateObj, detail);
+        const formattedDate = dispensingShop?.formattedSaleTime || (soldDateObj ? formatSaleDateTime(soldDateObj, detail) : null);
         const relativeTimeStr = dispensingShop?.relativeSaleTime || 'recently';
 
         const messages = {
             [UI_STATE.GENUINE]:            '100% Genuine Medicine — Registered & Safe',
             [UI_STATE.PURCHASED_RECENTLY]: `100% Genuine Medicine — Recently Dispensed from ${shopDisplayName} (${relativeTimeStr}).`,
-            [UI_STATE.ALREADY_SOLD]:       `Notice: This medicine was dispensed on ${formattedDate} by ${shopDisplayName}. If you purchased this earlier, check your seller details below. If buying now as new stock, it may be a duplicate clone.`,
+            [UI_STATE.ALREADY_SOLD]:       `Notice: This medicine was dispensed on ${formattedDate || 'a prior date'} by ${shopDisplayName}. If you purchased this earlier, check your seller details below. If buying now as new stock, it may be a duplicate clone.`,
             [UI_STATE.RECALLED]:           'CRITICAL: Batch recalled by manufacturer. Do not consume.',
-            [UI_STATE.AT_SHOP]:            dispensingShop?.name ? `Verified authentic stock at ${dispensingShop.name}.` : 'Verified authentic inventory at a registered pharmacy.',
+            [UI_STATE.AT_SHOP]:            dispensingShop?.name ? `In stock at ${dispensingShop.name}. Awaiting pharmacist scan and sale.` : 'In stock at registered pharmacy. Awaiting pharmacist scan and sale.',
             [UI_STATE.NOT_FOUND]:          'Valid manufacturer token, but no on-chain mint event found.',
         };
 
-        console.log(`[consumer-service Verify] packHash: ${packHash} — uiState: ${uiState} — blockchainStatus: ${blockchainStatus} — shop: ${dispensingShop?.name || 'N/A'} — isRecentlySold: ${isRecentlySold}`);
+        console.log(`[consumer-service Verify] packHash: ${packHash} — uiState: ${uiState} — blockchainStatus: ${blockchainStatus} — shop: ${dispensingShop?.name || 'N/A'} — isSold: ${Boolean(isSold)} — isRecentlySold: ${isRecentlySold}`);
 
         return res.status(200).json({
             status: 'success',
             uiState,
+            isSold: Boolean(isSold),
             isRecentlySold: isSold ? isRecentlySold : false,
+            custodyState: isSold ? 'SOLD' : isAtShop ? 'AT_SHOP' : 'MINTED',
             hoursSinceSale: isSold ? hoursSinceSale : null,
             daysSinceSale: isSold ? daysSinceSale : null,
             message: messages[uiState] || 'Verification complete',

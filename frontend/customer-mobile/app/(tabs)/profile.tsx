@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import {
   View,
@@ -10,9 +10,11 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
+import { getMe, updateProfile } from '../../src/services/api/auth.api';
 import {
   User,
   Mail,
@@ -27,19 +29,48 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-  const { user, logout, setAuth } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [name, setName] = useState(user?.name || 'Verified Patient');
-  const [email, setEmail] = useState(user?.email || 'patient@pharmachain.gov.in');
-  const [phone, setPhone] = useState('+91 98765 43210');
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    if (Platform.OS === 'web') {
-      window.alert('Patient profile updated successfully!');
-    } else {
-      Alert.alert('Success', 'Patient profile updated successfully!');
+  useEffect(() => {
+    const fetchLatestProfile = async () => {
+      try {
+        const token = await SecureStore.getItemAsync('pharmaToken');
+        if (token) {
+          const freshUser = await getMe(token);
+          updateUser(freshUser);
+          if (freshUser.name) setName(freshUser.name);
+          if (freshUser.email) setEmail(freshUser.email);
+          if (freshUser.phone) setPhone(freshUser.phone);
+        }
+      } catch (err) {
+        console.warn('[MediaCare Profile] fetchLatestProfile notice:', err);
+      }
+    };
+    fetchLatestProfile();
+  }, []);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Validation Error', 'Name cannot be empty.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updated = await updateProfile({ name: name.trim(), phone: phone.trim() });
+      updateUser(updated);
+      Alert.alert('Saved', 'Your profile details have been saved to the database.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.message || err?.message || 'Failed to update profile.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -94,7 +125,7 @@ export default function ProfileScreen() {
               </View>
               <Text style={styles.avatarEmail}>{email}</Text>
               <View style={styles.patientIdPill}>
-                <Text style={styles.patientIdText}>ID: #PC-889214 • Fabric Node</Text>
+                <Text style={styles.patientIdText}>ID: #{user?.fabricNodeId || 'PC-889214'} • Fabric Node</Text>
               </View>
             </View>
           </View>
@@ -151,8 +182,12 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85}>
-              <Text style={styles.saveBtnText}>Save Profile Updates</Text>
+            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving} activeOpacity={0.85}>
+              {saving ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.saveBtnText}>Save Profile Updates</Text>
+              )}
             </TouchableOpacity>
           </View>
 

@@ -1,29 +1,24 @@
 /**
  * useBlockStatusPoller
  *
- * Real-time account status synchronization:
- * 1. Checks GET /auth/me IMMEDIATELY on mount / boot / reload.
+ * One-time startup account status verification:
+ * 1. Checks GET /auth/me once on initial mount / reload.
  * 2. If the user was BLOCKED and is now UNBLOCKED (approved in DB),
- *    instantly dispatches setUnblocked(), restoring the full dashboard
- *    both on page reload and in real time without refreshing.
- * 3. If the user is active (APPROVED) and gets BLOCKED by admin,
- *    instantly dispatches setBlocked(), locking down the dashboard in real time.
- * 4. Continuously polls every 6 seconds so transitions in either direction
- *    (block or unblock) are reflected with minimal latency.
+ *    restores dashboard access.
+ * 3. All subsequent runtime blocking enforcement is handled organically by
+ *    identifyUser middleware on every authenticated request + Axios 403 interceptors,
+ *    eliminating periodic polling overhead and server log spam.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../../store';
 import { setBlocked, setUnblocked } from '../slice/auth.slice';
 import { fetchAccountStatusAPI } from '../services/auth.api';
 
-const POLL_INTERVAL_MS = 6_000; // 6 seconds for responsive real-time sync
-
 export const useBlockStatusPoller = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated, kycStatus, token } = useSelector((state: RootState) => state.auth);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const checkStatus = useCallback(async () => {
     const activeToken =
@@ -64,24 +59,11 @@ export const useBlockStatusPoller = () => {
       token || (typeof window !== 'undefined' && localStorage.getItem('pharma_token'));
 
     if (!isAuthenticated && !hasStoredToken) {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
       return;
     }
 
-    // 1. Run check IMMEDIATELY on mount / reload so status is verified with backend instantly
+    // Run check once on initial mount/reload to verify account standing
     checkStatus();
-
-    // 2. Schedule recurring poll every 6 seconds
-    timerRef.current = setInterval(checkStatus, POLL_INTERVAL_MS);
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
   }, [isAuthenticated, token, checkStatus]);
 };
+

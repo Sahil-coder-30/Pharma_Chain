@@ -3,7 +3,6 @@ import { useDashboard } from '../../features/dashboard/Hooks/dashboard.hooks';
 import {
   Search,
   Layers,
-  ShoppingCart,
   AlertOctagon,
   X,
 } from 'lucide-react';
@@ -14,7 +13,6 @@ export const GlobalSearchModal: React.FC = () => {
     isSearchModalOpen,
     setIsSearchOpen,
     batches,
-    orders,
     inventory,
     recalls,
     navigateTo,
@@ -74,14 +72,6 @@ export const GlobalSearchModal: React.FC = () => {
       )
     : [];
 
-  const matchedOrders = cleanQuery
-    ? orders.filter(
-        (o) =>
-          o.orderNumber.toLowerCase().includes(cleanQuery) ||
-          o.pharmacyName.toLowerCase().includes(cleanQuery)
-      )
-    : [];
-
   const matchedRecalls = cleanQuery
     ? recalls.filter(
         (r) =>
@@ -94,7 +84,6 @@ export const GlobalSearchModal: React.FC = () => {
   const totalResults =
     matchedBatches.length +
     matchedInventory.length +
-    matchedOrders.length +
     matchedRecalls.length;
 
   return (
@@ -169,7 +158,7 @@ export const GlobalSearchModal: React.FC = () => {
                       key={batch.id}
                       onClick={() => {
                         setSelectedBatch(batch);
-                        navigateTo('batches');
+                        navigateTo('batch-detail');
                         setIsSearchOpen(false);
                       }}
                       className="p-2.5 rounded-xl hover:bg-[var(--bg-active)] border border-transparent hover:border-[var(--border)] cursor-pointer flex items-center justify-between transition-colors"
@@ -227,40 +216,6 @@ export const GlobalSearchModal: React.FC = () => {
                 </div>
               )}
 
-              {/* Orders */}
-              {matchedOrders.length > 0 && (
-                <div className="space-y-1">
-                  <div className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider px-2">
-                    B2B Pharmacy Orders ({matchedOrders.length})
-                  </div>
-                  {matchedOrders.map((ord) => (
-                    <div
-                      key={ord.id}
-                      onClick={() => {
-                        navigateTo('orders');
-                        setIsSearchOpen(false);
-                      }}
-                      className="p-2.5 rounded-xl hover:bg-[var(--bg-active)] border border-transparent hover:border-[var(--border)] cursor-pointer flex items-center justify-between transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-blue-950/40 text-blue-400">
-                          <ShoppingCart className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-[var(--text-primary)]">{ord.orderNumber}</span>
-                            <span className="text-xs text-[var(--text-muted)]">— {ord.pharmacyName}</span>
-                          </div>
-                          <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                            ₹{ord.totalAmount.toLocaleString()} • {ord.totalQuantity} items
-                          </p>
-                        </div>
-                      </div>
-                      <StatusBadge status={ord.status} size="sm" />
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>

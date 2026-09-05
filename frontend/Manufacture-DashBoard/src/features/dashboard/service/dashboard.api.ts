@@ -7,6 +7,7 @@ import {
   DashboardStats,
   ManufacturerProfile,
   InventoryItem,
+  FormulationItem,
 } from '../../../types';
 import { parseApiError } from '../../../utils/errorHandler';
 
@@ -18,6 +19,24 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Indian Standard Time (IST) formatting helpers
+export const formatISTDateString = (dateInput?: string | number | Date): string => {
+  if (!dateInput) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  }
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return String(dateInput);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
+};
+
+export const formatISTISOString = (dateInput?: string | number | Date): string => {
+  const d = dateInput && !isNaN(new Date(dateInput).getTime()) ? new Date(dateInput) : new Date();
+  const istOffsetMs = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(d.getTime() + istOffsetMs);
+  const pad = (n: number, z = 2) => String(n).padStart(z, '0');
+  return `${ist.getUTCFullYear()}-${pad(ist.getUTCMonth() + 1)}-${pad(ist.getUTCDate())}T${pad(ist.getUTCHours())}:${pad(ist.getUTCMinutes())}:${pad(ist.getUTCSeconds())}.${pad(ist.getUTCMilliseconds(), 3)}+05:30`;
+};
 
 // Request interceptor to attach Bearer token ONLY if it is a valid signed JWT format
 api.interceptors.request.use((config) => {
@@ -34,16 +53,32 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor to handle 401 Unauthorized cleanly
+// Response interceptor to handle 401 Unauthorized and 403 ACCOUNT_BLOCKED cleanly
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const data = error.response?.data;
+
+    if (status === 401) {
       const token = localStorage.getItem('pharma_token');
       if (token && (token === 'pending_token' || token.split('.').length !== 3)) {
         localStorage.removeItem('pharma_token');
       }
+    } else if (status === 403 && (data?.code === 'ACCOUNT_BLOCKED' || data?.code === 'ACCOUNT_SUSPENDED')) {
+      console.warn('[dashboard.api] 403 ACCOUNT_BLOCKED intercepted — locking dashboard session');
+      import('../../../store').then(({ store }) => {
+        import('../../auth/slice/auth.slice').then(({ setBlocked }) => {
+          store.dispatch(
+            setBlocked({
+              reason: data?.reason || data?.message,
+              blockedAt: data?.blockedAt,
+            })
+          );
+        });
+      });
     }
+
     return Promise.reject(error);
   }
 );
@@ -73,8 +108,8 @@ export const normalizeBackendBatch = (b: any): Batch => {
     coating: b.coating || 'Film Coated',
     storageConditions: b.storageConditions || 'Store in a cool dry place',
     shelfLifeMonths: b.shelfLifeMonths || 24,
-    manufacturingDate: b.manufacturingDate ? new Date(b.manufacturingDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    expiryDate: b.expiryDate ? new Date(b.expiryDate).toISOString().split('T')[0] : new Date(Date.now() + 730 * 86400000).toISOString().split('T')[0],
+    manufacturingDate: formatISTDateString(b.manufacturingDate),
+    expiryDate: formatISTDateString(b.expiryDate || (Date.now() + 730 * 86400000)),
     productionSite: b.productionSite || 'Formulation Facility Unit 1',
     productionAddress: b.productionSiteAddress || undefined,
     manufacturingLicenseNo: b.manufacturingLicenseNo || 'CDSCO-MFG-DL-2024-88491',
@@ -94,8 +129,8 @@ export const normalizeBackendBatch = (b: any): Batch => {
     coldChainRequired: Boolean(b.coldChainRequired),
     temperatureRange: b.temperatureRange || undefined,
     qaOfficerId: b.qaOfficerId || undefined,
-    qaApprovalDate: b.qaApprovalDate ? new Date(b.qaApprovalDate).toISOString().split('T')[0] : undefined,
-    retestDate: b.retestDate ? new Date(b.retestDate).toISOString().split('T')[0] : undefined,
+    qaApprovalDate: b.qaApprovalDate ? formatISTDateString(b.qaApprovalDate) : undefined,
+    retestDate: b.retestDate ? formatISTDateString(b.retestDate) : undefined,
     coaReferenceNo: b.coaReferenceNo || undefined,
     microbialTestStatus: b.microbialTestStatus || 'PASSED',
     dissolutionTestStatus: b.dissolutionTestStatus || 'PASSED',
@@ -104,10 +139,13 @@ export const normalizeBackendBatch = (b: any): Batch => {
     tags: Array.isArray(b.tags) ? b.tags : [],
     mintStatus: b.mintStatus || 'PENDING',
     recallReason: b.recallReason || undefined,
-    createdAt: b.createdAt ? new Date(b.createdAt).toISOString() : new Date().toISOString(),
+    createdAt: formatISTISOString(b.createdAt),
     qrPackageStatus: b.mintStatus === 'MINTED' ? 'READY' : b.mintStatus === 'MINTING' ? 'GENERATING' : 'NOT_STARTED',
-    txHash: b.txHash || `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-    blockNumber: b.blockNumber || 18430,
+    txHash: b.txHash || undefined,
+    blockNumber: b.blockNumber != null ? Number(b.blockNumber) : undefined,
+    blockchainStatus: b.blockchainStatus || (b.mintStatus === 'MINTED' ? 'COMMITTED' : 'PENDING'),
+    blockchainError: b.blockchainError || undefined,
+    blockchainRecordedCount: b.blockchainRecordedCount != null ? Number(b.blockchainRecordedCount) : undefined,
     s3DownloadUrl: b.s3DownloadUrl || undefined,
     s3FileKey: b.s3FileKey || undefined,
     s3Mode: b.s3Mode || undefined,
@@ -203,7 +241,7 @@ export const getDashboardDataAPI = async () => {
         headquarters: '',
         plantLocations: [],
         authorizedPersonnel: [],
-        registeredAt: new Date().toISOString().split('T')[0],
+        registeredAt: formatISTDateString(),
         gstin: '',
         cdscoRegistration: '',
       };
@@ -331,6 +369,21 @@ export const mintBatchAPI = async (batchId: string): Promise<{ accepted: boolean
 };
 
 /**
+ * Service API: POST /api/manufacturer/batch/:batchId/retry-blockchain
+ * Retries committing batch transitions to Hyperledger Fabric if initial commit failed or was deferred.
+ */
+export const retryBlockchainBatchAPI = async (batchId: string): Promise<any> => {
+  try {
+    const response = await api.post(`/batch/${encodeURIComponent(batchId)}/retry-blockchain`);
+    return response.data;
+  } catch (error: any) {
+    const parsed = parseApiError(error, 'Failed to retry blockchain ledger sync');
+    throw new Error(parsed.message);
+  }
+};
+
+
+/**
  * Service API: GET /api/manufacturer/batch/:batchId
  * Retrieves detailed batch metadata & active minting progress
  */
@@ -384,7 +437,7 @@ export const initiateRecallAPI = async (recallPayload: {
       medicineName: 'Pharmaceutical Formulation',
       dosage: 'Standard Dosage',
       reason: recallPayload.reason,
-      date: new Date().toISOString(),
+      date: formatISTISOString(),
       affectedPacks: 100000,
       status: 'ACTIVE',
       initiatedBy: 'Head of Quality Assurance & QP',
@@ -397,6 +450,62 @@ export const initiateRecallAPI = async (recallPayload: {
     };
   } catch (error: any) {
     const parsed = parseApiError(error, 'Batch recall directive failed on backend cluster.');
+    throw new Error(parsed.message);
+  }
+};
+
+/**
+ * Service API: PUT /api/manufacturer/batch/:batchId
+ * Updates QA test results, storage conditions, operational parameters, and notes.
+ */
+export const updateBatchAPI = async (batchId: string, updates: Partial<Batch>): Promise<Batch> => {
+  try {
+    const payload = {
+      ...updates,
+      microbialTestStatus: updates.microbialTestStatus ? mapTestStatus(updates.microbialTestStatus) : undefined,
+      dissolutionTestStatus: updates.dissolutionTestStatus ? mapTestStatus(updates.dissolutionTestStatus) : undefined,
+      drugSchedule: updates.drugSchedule ? mapDrugSchedule(updates.drugSchedule) : undefined,
+      pharmacopoeiaStandard: updates.pharmacopoeiaStandard ? mapPharmacopoeia(updates.pharmacopoeiaStandard) : undefined,
+    };
+    const response = await api.put(`/batch/${encodeURIComponent(batchId)}`, payload);
+    const updated = response.data?.data || response.data;
+    return normalizeBackendBatch(updated);
+  } catch (error: any) {
+    const parsed = parseApiError(error, `Failed to update batch ${batchId}.`);
+    throw new Error(parsed.message);
+  }
+};
+
+/**
+ * Service API: DELETE /api/manufacturer/batch/:batchId
+ * Deletes a draft/pending or failed batch from the ledger database.
+ */
+export const deleteBatchAPI = async (batchId: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await api.delete(`/batch/${encodeURIComponent(batchId)}`);
+    return {
+      success: true,
+      message: response.data?.message || `Batch ${batchId} was successfully deleted.`,
+    };
+  } catch (error: any) {
+    const parsed = parseApiError(error, `Failed to delete batch ${batchId}.`);
+    throw new Error(parsed.message);
+  }
+};
+
+/**
+ * Service API: POST /api/manufacturer/batch/:batchId/pack/verify
+ * Performs real-time cryptographic audit of an individual pack (ES256 signature, Fabric world state, expiry).
+ */
+export const verifyPackStatusAPI = async (
+  batchId: string,
+  payload: { signedToken?: string; packHash?: string; serialNumber?: string }
+): Promise<any> => {
+  try {
+    const response = await api.post(`/batch/${encodeURIComponent(batchId)}/pack/verify`, payload);
+    return response.data;
+  } catch (error: any) {
+    const parsed = parseApiError(error, 'Pack cryptographic verification failed.');
     throw new Error(parsed.message);
   }
 };
@@ -478,7 +587,7 @@ export const downloadBatchCsvAPI = async (
       }
     }
 
-    const parsed = parseApiError(error, `CSV export failed for batch ${batchId}. Please ensure the batch is minted.`);
+    const parsed = parseApiError(error, `CSV export from AWS S3 failed for batch ${batchId}. Please ensure the batch is minted and S3 is accessible.`);
     throw new Error(parsed.message);
   }
 };
@@ -490,3 +599,28 @@ export const updateOrderStatusAPI = async (orderId: string, status: B2BOrder['st
 export const resolveAlertAPI = async (alertId: string) => {
   return { alertId, resolved: true };
 };
+
+/**
+ * Service API: GET /api/manufacturer/batch/formulations
+ * Retrieves aggregated product formulations catalog directly from real database batches.
+ */
+export const getFormulationsAPI = async (search?: string): Promise<FormulationItem[]> => {
+  try {
+    const token = localStorage.getItem('pharma_token') || sessionStorage.getItem('pharma_token');
+    if (!token || token === 'pending_token' || token.split('.').length !== 3) {
+      return [];
+    }
+    const response = await api.get('/batch/formulations', { params: { search: search || undefined } });
+    if (response.data && Array.isArray(response.data.data)) {
+      return response.data.data;
+    }
+    return [];
+  } catch (error: any) {
+    const parsed = parseApiError(error);
+    if (!parsed.isAuthError) {
+      console.warn(`[getFormulationsAPI] Notice: ${parsed.message}`);
+    }
+    return [];
+  }
+};
+

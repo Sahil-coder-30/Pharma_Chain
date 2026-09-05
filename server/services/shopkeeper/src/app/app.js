@@ -9,6 +9,9 @@ import scanRouter from '../routes/scan.routes.js';
 import medicineScanRouter from '../routes/medicineScan.routes.js';
 import customerScanRouter from '../routes/customerScan.routes.js';
 import internalRouter from '../routes/internal.routes.js';
+import { initIST } from '../utils/time.js';
+
+initIST();
 
 const app = express();
 

@@ -7,8 +7,8 @@ import {
     isS3Configured,
     uploadCsvToS3,
     generatePresignedUrl,
-    saveLocalCsvFallback,
 } from './s3.service.js';
+import { getISTISOString, getISTDateCompact, getISTTimeString } from '../utils/time.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ES256_ALGORITHM = 'ES256';  // For manufacturer pack JWTs (ECDSA P-256)
@@ -41,10 +41,40 @@ const deriveKey = (masterSecret, manufacturerId) =>
         );
     });
 
+// secp256r1 parameters for deterministic key derivation
+const SECP256R1_N = BigInt('0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551');
+const PKCS8_P256_PREFIX = Buffer.from('3041020100301306072a8648ce3d020106082a8648ce3d030107042730250201010420', 'hex');
+
+/**
+ * Deterministically derives an ECDSA P-256 (secp256r1) keypair for a manufacturer
+ * from the cluster master secret and manufacturerId.
+ * Guarantees that across container recreations, machine reboots, and storage wipes,
+ * a manufacturer's cryptographic identity is 100% stable, persistent, and reproducible.
+ * @param {string} masterSecret - Cluster master encryption key.
+ * @param {string} manufacturerId - Manufacturer identifier.
+ * @returns {{ privateKey: string, publicKey: string }}
+ */
+export const deriveDeterministicKeyPair = (masterSecret, manufacturerId) => {
+    const prk = crypto.createHmac('sha256', masterSecret).update('pharmachain-ec-v1').digest();
+    const dBytes = crypto.createHmac('sha256', prk).update(manufacturerId).digest();
+    const d = (BigInt('0x' + dBytes.toString('hex')) % (SECP256R1_N - 1n)) + 1n;
+    const dHex = d.toString(16).padStart(64, '0');
+    const dBuf = Buffer.from(dHex, 'hex');
+
+    const pkcs8Der = Buffer.concat([PKCS8_P256_PREFIX, dBuf]);
+    const privKeyObj = crypto.createPrivateKey({ key: pkcs8Der, format: 'der', type: 'pkcs8' });
+    const pubKeyObj = crypto.createPublicKey(privKeyObj);
+
+    return {
+        privateKey: privKeyObj.export({ type: 'pkcs8', format: 'pem' }),
+        publicKey: pubKeyObj.export({ type: 'spki', format: 'pem' }),
+    };
+};
+
 // ── MANUFACTURER KEY OPERATIONS (ES256 / ECDSA P-256) ────────────────────────
 
 /**
- * Generates an ECDSA P-256 keypair for a manufacturer, encrypts the private key
+ * Generates an ECDSA P-256 keypair for a manufacturer deterministically, encrypts the private key
  * with AES-256-GCM, and persists it to the keystore file.
  * @param {string} manufacturerId - Unique manufacturer identifier.
  * @returns {Promise<{ publicKeyPem: string, keyId: string }>}
@@ -53,12 +83,8 @@ export const generateManufacturerKey = async (manufacturerId) => {
     const masterSecret = process.env.KEY_ENCRYPTION_SECRET;
     if (!masterSecret) throw new Error('KEY_ENCRYPTION_SECRET is not configured');
 
-    // ── Generate EC P-256 keypair ─────────────────────────────────────────────
-    const { privateKey, publicKey } = crypto.generateKeyPairSync('ec', {
-        namedCurve: CURVE,
-        publicKeyEncoding: { type: 'spki', format: 'pem' },
-        privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-    });
+    // ── Derive deterministic EC P-256 keypair ─────────────────────────────────
+    const { privateKey, publicKey } = deriveDeterministicKeyPair(masterSecret, manufacturerId);
 
     // ── Derive encryption key and encrypt private key ─────────────────────────
     const derivedKey = await deriveKey(masterSecret, manufacturerId);
@@ -93,16 +119,18 @@ export const generateManufacturerKey = async (manufacturerId) => {
         publicKeys: publicKeysList,
         algorithm: ES256_ALGORITHM,
         keyId,
-        createdAt: new Date().toISOString(),
+        createdAt: existing?.createdAt || getISTISOString(),
     };
     await writeKeystore(keystore);
 
-    console.log(`[pharma-core Crypto] Generated and stored EC key for ${manufacturerId} (kid: ${keyId})`);
+    console.log(`[pharma-core Crypto] Derived and stored deterministic EC key for ${manufacturerId} (kid: ${keyId})`);
     return { publicKeyPem: publicKey, keyId };
 };
 
 /**
  * Decrypts and returns the raw private key PEM for a manufacturer.
+ * If the key is missing from the local keystore (e.g., after a container restart or storage wipe),
+ * it automatically reconstructs the deterministic keypair.
  * The key exists only transiently in memory during this call.
  * @param {string} manufacturerId
  * @returns {Promise<string>} Raw private key PEM string.
@@ -112,8 +140,19 @@ export const decryptPrivateKey = async (manufacturerId) => {
     if (!masterSecret) throw new Error('KEY_ENCRYPTION_SECRET is not configured');
 
     const keystore = await readKeystore();
-    const entry = keystore[manufacturerId];
-    if (!entry) throw new Error(`No key found for manufacturer: ${manufacturerId}`);
+    let entry = keystore[manufacturerId];
+
+    // If key not in keystore (e.g. after container restart / storage wipe), auto-derive deterministically
+    if (!entry || !entry.encryptedPrivKey) {
+        console.log(`[pharma-core Crypto] Keystore miss for ${manufacturerId} — auto-deriving deterministic key...`);
+        await generateManufacturerKey(manufacturerId);
+        const refreshedKeystore = await readKeystore();
+        entry = refreshedKeystore[manufacturerId];
+    }
+
+    if (!entry || !entry.encryptedPrivKey) {
+        throw new Error(`No key found for manufacturer: ${manufacturerId}`);
+    }
 
     const [ivHex, authTagHex, cipherHex] = entry.encryptedPrivKey.split(':');
     const derivedKey = await deriveKey(masterSecret, manufacturerId);
@@ -141,13 +180,18 @@ export const decryptPrivateKey = async (manufacturerId) => {
  * @returns {Promise<string>} Signed JWT string.
  */
 export const signPackJwt = async (payload, manufacturerId) => {
-    const keystore = await readKeystore();
-    const entry = keystore[manufacturerId];
+    let keystore = await readKeystore();
+    let entry = keystore[manufacturerId];
+    if (!entry || !entry.encryptedPrivKey) {
+        await generateManufacturerKey(manufacturerId);
+        keystore = await readKeystore();
+        entry = keystore[manufacturerId];
+    }
     if (!entry) throw new Error(`No key found for manufacturer: ${manufacturerId}`);
 
-    const privateKeyPem = await decryptPrivateKey(manufacturerId);
+    const privateKey = await decryptPrivateKey(manufacturerId);
 
-    return jwt.sign(payload, privateKeyPem, {
+    return jwt.sign(payload, privateKey, {
         algorithm: ES256_ALGORITHM,
         keyid: entry.keyId,
     });
@@ -185,7 +229,7 @@ export const verifyPackJwt = async (signedToken) => {
             }
         }
 
-        // 2. By manufacturerId
+        // 2. By manufacturerId in local keystore
         if (manufacturerId && keystore[manufacturerId]) {
             const entryByMfr = keystore[manufacturerId];
             if (entryByMfr.publicKeyPem && !candidateKeys.includes(entryByMfr.publicKeyPem)) {
@@ -195,6 +239,18 @@ export const verifyPackJwt = async (signedToken) => {
                 for (const pk of entryByMfr.publicKeys) {
                     if (pk && !candidateKeys.includes(pk)) candidateKeys.push(pk);
                 }
+            }
+        }
+
+        // 3. By deterministic derivation for manufacturerId
+        if (manufacturerId && process.env.KEY_ENCRYPTION_SECRET) {
+            try {
+                const det = deriveDeterministicKeyPair(process.env.KEY_ENCRYPTION_SECRET, manufacturerId);
+                if (det?.publicKey && !candidateKeys.includes(det.publicKey)) {
+                    candidateKeys.push(det.publicKey);
+                }
+            } catch {
+                // Non-fatal
             }
         }
 
@@ -260,7 +316,7 @@ export const verifyPackJwt = async (signedToken) => {
                                                 publicKeys: remoteKeys,
                                                 algorithm: ES256_ALGORITHM,
                                                 keyId: kid || `mfr-key-${mfrKey.toLowerCase()}`,
-                                                createdAt: new Date().toISOString(),
+                                                createdAt: getISTISOString(),
                                             };
                                         }
                                         await writeKeystore(keystore);
@@ -416,13 +472,9 @@ export const derivePackHash = (signedToken) =>
 
 // ── LOCAL DATE / TIME HELPERS (used by mintPacksBatch) ────────────────────────
 
-const _formatDate = (d = new Date()) => {
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    return `${dd}${mm}${d.getFullYear()}`; // DDMMYYYY
-};
+const _formatDate = (d = new Date()) => getISTDateCompact(d); // DDMMYYYY in IST
 
-const _formatTime = (d = new Date()) => d.toTimeString().split(' ')[0]; // HH:MM:SS
+const _formatTime = (d = new Date()) => getISTTimeString(d); // HH:MM:SS in IST
 
 // ── OPTIMIZED BULK BATCH MINTING ──────────────────────────────────────────────
 
@@ -535,7 +587,7 @@ export const mintPacksBatch = async (batchId, manufacturerId, expiryDate, quanti
  *   s3FileKey:                string,
  *   s3DownloadUrl:            string,
  *   s3UrlExpiresAt:           string|null,
- *   s3Mode:                   'aws'|'local',
+ *   s3Mode:                   'aws',
  *   backendSubmitted:         boolean,
  *   partialBlockchainSubmit:  boolean,
  *   blockchainRecorded:       number,
@@ -586,42 +638,31 @@ export const mintAndUploadBatch = async (
     const csvContent = csvRows.join('\n');
     const uploadStart = Date.now();
 
-    // ── Step 3: Upload to S3 or save locally ─────────────────────────────────
-    let s3FileKey, s3DownloadUrl, s3UrlExpiresAt, s3Mode;
-
-    if (isS3Configured()) {
-        try {
-            // ── Production path: stream to AWS S3 ────────────────────────────────
-            const uploadResult    = await uploadCsvToS3(batchId, csvContent, medicineName);
-            const presignedResult = await generatePresignedUrl(uploadResult.s3FileKey);
-
-            s3FileKey      = uploadResult.s3FileKey;
-            s3DownloadUrl  = presignedResult.s3DownloadUrl;
-            s3UrlExpiresAt = presignedResult.s3UrlExpiresAt;
-            s3Mode         = 'aws';
-        } catch (s3Err) {
-            console.warn(
-                `[pharma-core Crypto] ⚠️  AWS S3 upload failed (${s3Err.message}). ` +
-                `Falling back to local disk storage at ./data/exports/${batchId}.csv`
-            );
-            const localResult = await saveLocalCsvFallback(batchId, csvContent);
-            s3FileKey         = localResult.s3FileKey;
-            s3DownloadUrl     = localResult.s3DownloadUrl;
-            s3UrlExpiresAt    = localResult.s3UrlExpiresAt;
-            s3Mode            = 'local';
-        }
-    } else {
-        // ── Dev fallback path: save to ./data/exports/{batchId}.csv ──────────
-        const localResult = await saveLocalCsvFallback(batchId, csvContent);
-        s3FileKey         = localResult.s3FileKey;
-        s3DownloadUrl     = localResult.s3DownloadUrl;
-        s3UrlExpiresAt    = localResult.s3UrlExpiresAt;
-        s3Mode            = 'local';
+    // ── Step 3: Upload exclusively to AWS S3 ─────────────────────────────────
+    if (!isS3Configured()) {
+        throw new Error(
+            `[pharma-core S3] AWS S3 is not configured. ` +
+            `Batch ${batchId} cannot be minted because artifacts must be stored exclusively in AWS S3.`
+        );
     }
 
+    let s3FileKey, s3DownloadUrl, s3UrlExpiresAt;
+    const s3Mode = 'aws';
+
+    try {
+        const uploadResult    = await uploadCsvToS3(batchId, csvContent, medicineName);
+        const presignedResult = await generatePresignedUrl(uploadResult.s3FileKey);
+
+        s3FileKey      = uploadResult.s3FileKey;
+        s3DownloadUrl  = presignedResult.s3DownloadUrl;
+        s3UrlExpiresAt = presignedResult.s3UrlExpiresAt;
+    } catch (s3Err) {
+        console.error(`[pharma-core Crypto] ❌ AWS S3 upload failed for ${batchId}:`, s3Err.message);
+        throw new Error(`[pharma-core S3] S3 upload failed for batch ${batchId}: ${s3Err.message}`);
+    }
 
     const uploadMs = Date.now() - uploadStart;
-    console.log(`[pharma-core Crypto] CSV ${s3Mode === 'aws' ? 'uploaded to S3' : 'saved locally'} in ${uploadMs}ms`);
+    console.log(`[pharma-core Crypto] CSV uploaded to S3 in ${uploadMs}ms`);
 
     // ── Step 4: Submit MINTED transitions to Hyperledger Fabric ─────────────
     // Non-fatal: packs are signed and CSV is uploaded even if Fabric is temporarily down.
@@ -669,7 +710,7 @@ export const mintAndUploadBatch = async (
         blockchainRecorded:      recordedHashes.length,
         publicKeyPem:            publicKeyPem || null,
         keyId:                   keyId || null,
-        mintedAt:                new Date().toISOString(),
+        mintedAt:                getISTISOString(),
         timingMs: {
             signing: signMs,
             upload:  uploadMs,

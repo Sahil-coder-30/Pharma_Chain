@@ -1,5 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import axios from 'axios';
+import { getISTISOString } from '../utils/time.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const KEYSTORE_PATH = process.env.KEYSTORE_PATH || './data/keystore.json';
@@ -26,6 +28,54 @@ const withWriteLock = (fn) => {
 };
 
 /**
+ * Bootstraps and syncs the local keystore cache with certified public keys from manufacturer-service.
+ * Runs non-blockingly during startup and can be retried on demand.
+ */
+export const syncKeystoreFromDatabase = async () => {
+    try {
+        const mfrServiceUrl = process.env.MANUFACTURER_SERVICE_URL || 'http://manufacturer-service:80';
+        const res = await axios.get(`${mfrServiceUrl}/api/manufacturer/public/keys/all`, { timeout: 3500 });
+        if (res.data?.status === 'success' && res.data?.data) {
+            const keystore = await readKeystore();
+            let changed = false;
+            for (const [mfrId, info] of Object.entries(res.data.data)) {
+                if (!keystore[mfrId]) {
+                    keystore[mfrId] = {
+                        publicKeyPem: info.publicKeyPem,
+                        publicKeys: info.publicKeys || [info.publicKeyPem].filter(Boolean),
+                        keyId: info.keyId || `mfr-key-${mfrId.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                        algorithm: 'ES256',
+                        createdAt: info.createdAt || getISTISOString(),
+                    };
+                    changed = true;
+                } else {
+                    const existingPks = keystore[mfrId].publicKeys || [keystore[mfrId].publicKeyPem].filter(Boolean);
+                    const remotePks = info.publicKeys || [info.publicKeyPem].filter(Boolean);
+                    for (const rk of remotePks) {
+                        if (rk && !existingPks.includes(rk)) {
+                            existingPks.push(rk);
+                            changed = true;
+                        }
+                    }
+                    keystore[mfrId].publicKeys = existingPks;
+                    if (!keystore[mfrId].publicKeyPem && info.publicKeyPem) {
+                        keystore[mfrId].publicKeyPem = info.publicKeyPem;
+                        changed = true;
+                    }
+                }
+            }
+            if (changed) {
+                await writeKeystore(keystore);
+                console.log(`[pharma-core Keystore] Bootstrapped certified public keys from database for ${Object.keys(res.data.data).length} manufacturers`);
+            }
+        }
+    } catch (err) {
+        // Non-blocking notice during initial startup (e.g. manufacturer-service starting up concurrently)
+        console.log(`[pharma-core Keystore] Background keystore sync notice: ${err.message}`);
+    }
+};
+
+/**
  * Ensures the keystore file and its parent directory exist on startup.
  * Creates an empty keystore if the file does not yet exist.
  * Exits the process if the directory cannot be created.
@@ -48,6 +98,11 @@ export const initKeystore = async () => {
             await fs.writeFile(KEYSTORE_PATH, JSON.stringify(_keystoreCache, null, 2), 'utf-8');
             console.log(`[pharma-core Keystore] Created new empty keystore at ${KEYSTORE_PATH}`);
         }
+
+        // Trigger non-blocking database bootstrap sync shortly after startup
+        setTimeout(() => {
+            syncKeystoreFromDatabase().catch(() => {});
+        }, 2000);
     } catch (error) {
         console.error('[pharma-core Keystore] FATAL: Could not initialize keystore:', error.message);
         process.exit(1);

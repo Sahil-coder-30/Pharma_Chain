@@ -3,8 +3,10 @@ import { identifyUser } from '../middleware/identifyUser.middleware.js';
 import {
     createBatchController,
     listBatchesController,
+    getFormulationsController,
     getBatchController,
     getPublicBatchDetailsController,
+    getAllRecalledBatchesController,
     mintBatchController,
     recallBatchController,
     exportBatchCsvController,
@@ -12,11 +14,17 @@ import {
     lookupPackGlobalController,
     previewBatchPacksController,
     retryBlockchainBatchController,
+    updateBatchController,
+    deleteBatchController,
+    verifyBatchPackController,
 } from '../controllers/batch.controller.js';
 
 const router = express.Router();
 
 // ── Public Routes (No authentication required) ────────────────────────────────
+// Public recall feed across all manufacturers and batches
+router.get('/public/recalls/all', getAllRecalledBatchesController);
+
 // Called by consumer-service and shopkeeper-service to fetch medicine details by batchId
 // after verifying a pack's QR JWT.
 router.get('/public/:batchId', getPublicBatchDetailsController);
@@ -31,12 +39,23 @@ router.get('/pack/lookup/:identifier', lookupPackGlobalController);
 router.post('/', createBatchController);
 router.post('/create', createBatchController);
 
+// GET /api/manufacturer/batch/formulations — list aggregated medicine formulations for catalog
+router.get('/formulations', getFormulationsController);
 
 // GET /api/manufacturer/batch — list all batches for this manufacturer (with pagination & filters)
 router.get('/', listBatchesController);
 
 // GET /api/manufacturer/batch/:batchId — get a specific batch and active mint progress
 router.get('/:batchId', getBatchController);
+
+// PUT /api/manufacturer/batch/:batchId — update batch metadata / QA specs / storage conditions
+router.put('/:batchId', updateBatchController);
+
+// DELETE /api/manufacturer/batch/:batchId — delete draft/pending/failed batch
+router.delete('/:batchId', deleteBatchController);
+
+// POST /api/manufacturer/batch/:batchId/pack/verify — cryptographically verify pack & check on-chain status
+router.post('/:batchId/pack/verify', verifyBatchPackController);
 
 // GET /api/manufacturer/batch/:batchId/preview — paginated pack preview table for dashboard UI
 // Reads the batch CSV (from S3 or local disk), parses it, and returns searchable/paginated JSON.

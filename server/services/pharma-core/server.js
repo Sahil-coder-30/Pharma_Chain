@@ -1,9 +1,11 @@
 import dotenv from 'dotenv';
+import { initIST } from './src/utils/time.js';
 import app from './src/app/app.js';
 import { initKeystore } from './src/config/keystore.js';
 import { initKeys } from './src/config/keys.js';
 
 dotenv.config();
+initIST();
 
 const PORT = process.env.PORT || 4000;
 

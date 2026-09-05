@@ -10,7 +10,6 @@ import {
   Receipt,
   Plus,
   Minus,
-  Sparkles,
   ShieldCheck,
   CreditCard,
   Banknote,
@@ -49,18 +48,6 @@ export const POSTerminalView: React.FC = () => {
     if (!scanInput.trim()) return;
     verifyScan(scanInput.trim(), 'DISPENSE');
     setScanInput('');
-  };
-
-  const handleQuickPresetScan = (type: 'VALID_PANTO' | 'VALID_AZITHRO' | 'RECALLED_ROSUVA' | 'CLONED_DOUBLE_SALE') => {
-    if (type === 'VALID_PANTO') {
-      verifyScan('https://pharmachain.gov.in/verify/0x7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069?token=eyJhbGciOiJFUzI1NiJ9.pantoprazole', 'DISPENSE');
-    } else if (type === 'VALID_AZITHRO') {
-      verifyScan('https://pharmachain.gov.in/verify/0x4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a?token=eyJhbGciOiJFUzI1NiJ9.azithromycin', 'DISPENSE');
-    } else if (type === 'RECALLED_ROSUVA') {
-      verifyScan('https://pharmachain.gov.in/verify/0xrecalled_rosuvastatin_batch_2026_008', 'DISPENSE');
-    } else {
-      verifyScan('https://pharmachain.gov.in/verify/0xcloned_already_sold_token', 'DISPENSE');
-    }
   };
 
   const handleCheckout = () => {
@@ -127,43 +114,6 @@ export const POSTerminalView: React.FC = () => {
                 {loading ? 'Verifying...' : 'Verify & Add'}
               </button>
             </form>
-
-            {/* Quick Fast-Scan Preset Pills */}
-            <div className="pt-3 border-t border-[var(--border)] space-y-2">
-              <span className="text-[11px] text-[var(--text-muted)] font-semibold flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Fast-Scan Demo Presets:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickPresetScan('VALID_PANTO')}
-                  className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-emerald-500/30 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer"
-                >
-                  ✓ Pantoprazole 40mg (Valid)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPresetScan('VALID_AZITHRO')}
-                  className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-emerald-500/30 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 transition-colors cursor-pointer"
-                >
-                  ✓ Azithromycin 500mg (Valid)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPresetScan('RECALLED_ROSUVA')}
-                  className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-rose-500/30 text-[11px] font-semibold text-rose-600 dark:text-rose-400 transition-colors cursor-pointer"
-                >
-                  ✕ Recalled Rosuvastatin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPresetScan('CLONED_DOUBLE_SALE')}
-                  className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-element)] hover:bg-[var(--bg-active)] border border-amber-500/30 text-[11px] font-semibold text-amber-600 dark:text-amber-400 transition-colors cursor-pointer"
-                >
-                  ✕ Cloned Double Sale
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Scanned Items in Current Bill */}

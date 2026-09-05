@@ -146,3 +146,38 @@ export const suspendShopkeeperController = async (req, res) => {
         return res.status(status).json({ status: 'error', message: error.response?.data?.message || error.message });
     }
 };
+
+// POST /api/admin/shopkeepers/:id/unsuspend
+export const unsuspendShopkeeperController = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await approveShopkeeperKYC(id);
+
+        // Regulatory audit log
+        await AuditLog.create({
+            action:      'SHOPKEEPER_UNSUSPENDED',
+            performedBy: {
+                adminId:  req.admin.adminId,
+                email:    req.admin.email,
+                fullName: req.admin.fullName,
+                role:     req.admin.role,
+            },
+            targetType:  'SHOPKEEPER',
+            targetId:    result.shopkeeperId || id,
+            targetName:  result.shopName || null,
+            reason:      req.body.reason || 'Pharmacy suspension revoked by CDSCO Drug Inspector.',
+            metadata:    { verifiedAt: result.verifiedAt },
+            ipAddress:   req.ip || 'internal',
+        });
+
+        return res.status(200).json({
+            status:  'success',
+            message: 'Pharmacy suspension lifted. License restored to active status.',
+            data:    result,
+        });
+    } catch (error) {
+        console.error('[admin-service Shopkeeper] unsuspendShopkeeper error:', error.message);
+        const status = error.response?.status || 500;
+        return res.status(status).json({ status: 'error', message: error.response?.data?.message || error.message });
+    }
+};

@@ -5,6 +5,10 @@ import {
     statsController,
     historyController,
     inventoryController,
+    inboundsController,
+    recallsController,
+    reportIncidentController,
+    getIncidentsController,
     getProfileController,
     updateProfileController,
     getPublicShopProfileController,
@@ -28,6 +32,17 @@ router.get('/medicine/history', requireVerified, historyController);
 
 // GET /api/shopkeeper/inventory
 router.get('/inventory', requireVerified, inventoryController);
+
+// GET /api/shopkeeper/inbounds
+router.get('/inbounds', requireVerified, inboundsController);
+
+// GET /api/shopkeeper/recalls
+router.get('/recalls', requireVerified, recallsController);
+
+// POST /api/shopkeeper/incidents & GET /api/shopkeeper/incidents
+router.route('/incidents')
+    .post(requireVerified, reportIncidentController)
+    .get(requireVerified, getIncidentsController);
 
 // ── Profile ───────────────────────────────────────────────────────────────────
 

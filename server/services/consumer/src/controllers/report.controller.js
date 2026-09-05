@@ -1,4 +1,5 @@
 import { verifyToken } from '../services/coreClient.service.js';
+import { getISTISOString } from '../utils/time.js';
 
 // ── Controllers ───────────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ export const reportCounterfeitController = async (req, res) => {
         // For now, log the report with all available context.
 
         const report = {
-            reportedAt: new Date().toISOString(),
+            reportedAt: getISTISOString(),
             qrToken,
             tokenPayload,
             location: location || null,

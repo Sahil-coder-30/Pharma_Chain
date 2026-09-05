@@ -3,10 +3,18 @@ import { create } from 'zustand';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ConsumerUser {
+  id?: string;
+  _id?: string;
   googleId: string;
   email: string;
   name: string;
   picture?: string;
+  phone?: string;
+  address?: string;
+  kycStatus?: string;
+  fabricNodeId?: string;
+  role?: string;
+  lastLoginAt?: string | Date;
 }
 
 interface AuthState {
@@ -15,6 +23,7 @@ interface AuthState {
   pharmaToken: string | null;
   isLoading: boolean;
   setAuth: (user: ConsumerUser, token: string) => void;
+  updateUser: (updates: Partial<ConsumerUser>) => void;
   setLoading: (loading: boolean) => void;
   logout: () => void;
 }
@@ -32,6 +41,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     pharmaToken: token,
     isLoading: false,
   }),
+  updateUser: (updates: Partial<ConsumerUser>) => set((state) => ({
+    user: state.user ? { ...state.user, ...updates } : null,
+  })),
   setLoading: (loading: boolean) => set({ isLoading: loading }),
   logout: () => set({
     isAuthenticated: false,
