@@ -137,9 +137,9 @@ graph LR
 ```mermaid
 graph TD
     subgraph "Hyperledger Fabric 2.5 Architecture"
-        CA1["ca.org1.example.com (:7054)<br/>X.509 Identity Enrollment"]
-        ORDERER_NODE["orderer.example.com (:7050)<br/>Raft Single-Node Consensus"]
-        PEER_NODE["peer0.org1.example.com (:7051)<br/>Endorsement & Validation"]
+        CA1["ca.org1.pharmachain.net (:7054)<br/>X.509 Identity Enrollment"]
+        ORDERER_NODE["orderer.pharmachain.net (:7050)<br/>Raft Single-Node Consensus"]
+        PEER_NODE["peer0.pharmachain.net (:7051)<br/>Endorsement & Validation"]
         WORLD_STATE["couchdb0 (:5984)<br/>JSON World State Index"]
         SPRING_GW["pharma-backend (:8080)<br/>Spring Boot REST Gateway Client"]
         CONTRACT["pharmacc.jar<br/>Java Smart Contract State Machine"]

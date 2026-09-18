@@ -132,7 +132,15 @@ export interface Batch {
   blockchainStatus?: 'COMMITTED' | 'PARTIAL' | 'FAILED' | 'PENDING' | string;
   blockchainError?: string;
   blockchainRecordedCount?: number;
+
+  // V2 Cryptographic Architecture (PFS & Feistel)
+  feistelBatchId?: string;
+  batchPubKey?: string;
+  privKeyBurnedAt?: string;
+  totalPacks?: number;
+  qrVersion?: 'v1' | 'v2' | string;
 }
+
 
 
 export interface Pack {

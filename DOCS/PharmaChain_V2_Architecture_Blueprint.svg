@@ -1,0 +1,828 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2640 890" width="2640" height="890" style="background-color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <!-- Crisp Subtle Dot-Grid Background -->
+    <pattern id="dot-grid" width="34" height="34" patternUnits="userSpaceOnUse">
+      <path d="M 34 0 L 0 0 0 34" fill="none" stroke="#F1F5F9" stroke-width="1.2"/>
+    </pattern>
+
+    <!-- ULTRA-PROMINENT LARGE ARROWHEAD MARKERS -->
+    <marker id="arr-black" viewBox="0 0 14 14" refX="10" refY="7" markerWidth="9" markerHeight="9" orient="auto">
+      <polygon points="1 2, 13 7, 1 12" fill="#000000"/>
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 14 14" refX="10" refY="7" markerWidth="9" markerHeight="9" orient="auto">
+      <polygon points="1 2, 13 7, 1 12" fill="#0284C7"/>
+    </marker>
+    <marker id="arr-green" viewBox="0 0 14 14" refX="10" refY="7" markerWidth="9" markerHeight="9" orient="auto">
+      <polygon points="1 2, 13 7, 1 12" fill="#16A34A"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 14 14" refX="10" refY="7" markerWidth="9" markerHeight="9" orient="auto">
+      <polygon points="1 2, 13 7, 1 12" fill="#EF4444"/>
+    </marker>
+    <marker id="arr-amber" viewBox="0 0 14 14" refX="10" refY="7" markerWidth="9" markerHeight="9" orient="auto">
+      <polygon points="1 2, 13 7, 1 12" fill="#D97706"/>
+    </marker>
+    <marker id="arr-purple" viewBox="0 0 14 14" refX="10" refY="7" markerWidth="9" markerHeight="9" orient="auto">
+      <polygon points="1 2, 13 7, 1 12" fill="#7C3AED"/>
+    </marker>
+
+    <!-- ======================================================= -->
+    <!-- PROFESSIONAL VECTOR LUCIDE ICONS (NO UNPROFESSIONAL EMOJIS)-->
+    <!-- ======================================================= -->
+
+    <!-- 1. Factory Icon (Manufacturer) -->
+    <g id="icon-factory" viewBox="0 0 24 24">
+      <path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 18h1M12 18h1M7 18h1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <!-- 2. Store Icon (Shopkeeper) -->
+    <g id="icon-store" viewBox="0 0 24 24">
+      <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M2 7h20" stroke="currentColor" stroke-width="2"/>
+    </g>
+
+    <!-- 3. Smartphone Icon (Mobile POS / Citizen App) -->
+    <g id="icon-smartphone" viewBox="0 0 24 24">
+      <rect width="14" height="20" x="5" y="2" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 18h.01" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+
+    <!-- 4. Landmark / Government Icon (CDSCO / Regulator / Orderer) -->
+    <g id="icon-landmark" viewBox="0 0 24 24">
+      <line x1="3" x2="21" y1="22" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="6" x2="6" y1="18" y2="11" stroke="currentColor" stroke-width="2"/>
+      <line x1="10" x2="10" y1="18" y2="11" stroke="currentColor" stroke-width="2"/>
+      <line x1="14" x2="14" y1="18" y2="11" stroke="currentColor" stroke-width="2"/>
+      <line x1="18" x2="18" y1="18" y2="11" stroke="currentColor" stroke-width="2"/>
+      <polygon points="12 2 20 7 4 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    </g>
+
+    <!-- 5. Official AWS CloudFront Icon & Linear Gradient -->
+    <linearGradient x1="0%" y1="100%" x2="100%" y2="0%" id="grad-aws-cf">
+      <stop stop-color="#4D27A8" offset="0%"/>
+      <stop stop-color="#A166FF" offset="100%"/>
+    </linearGradient>
+    <symbol id="icon-aws-cloudfront" viewBox="0 0 80 80">
+      <rect x="0" y="0" width="80" height="80" rx="14" fill="url(#grad-aws-cf)"/>
+      <path d="M55.122,52.123 C55.122,50.469 53.776,49.123 52.122,49.123 C50.468,49.123 49.122,50.469 49.122,52.123 C49.122,53.777 50.468,55.123 52.122,55.123 C53.776,55.123 55.122,53.777 55.122,52.123 L55.122,52.123 Z M57.122,52.123 C57.122,54.88 54.879,57.123 52.122,57.123 C49.365,57.123 47.122,54.88 47.122,52.123 C47.122,49.366 49.365,47.123 52.122,47.123 C54.879,47.123 57.122,49.366 57.122,52.123 L57.122,52.123 Z M30.392,37.692 C30.392,36.038 29.046,34.692 27.392,34.692 C25.737,34.692 24.392,36.038 24.392,37.692 C24.392,39.346 25.737,40.692 27.392,40.692 C29.046,40.692 30.392,39.346 30.392,37.692 L30.392,37.692 Z M32.392,37.692 C32.392,40.449 30.148,42.692 27.392,42.692 C24.635,42.692 22.392,40.449 22.392,37.692 C22.392,34.935 24.635,32.692 27.392,32.692 C30.148,32.692 32.392,34.935 32.392,37.692 L32.392,37.692 Z M39.73,22.007 C39.73,23.661 41.076,25.007 42.73,25.007 C44.385,25.007 45.73,23.661 45.73,22.007 C45.73,20.352 44.385,19.007 42.73,19.007 C41.076,19.007 39.73,20.352 39.73,22.007 L39.73,22.007 Z M37.73,22.007 C37.73,19.25 39.974,17.007 42.73,17.007 C45.487,17.007 47.73,19.25 47.73,22.007 C47.73,24.764 45.487,27.007 42.73,27.007 C39.974,27.007 37.73,24.764 37.73,22.007 L37.73,22.007 Z M66,40 C66,30.727 61.028,22.148 53.012,17.509 C51.575,17.799 50.185,18.196 48.451,18.823 L47.771,16.942 C48.676,16.616 49.486,16.352 50.266,16.126 C47.046,14.737 43.548,14 40,14 C38.311,14 36.649,14.175 35.025,14.492 C36.201,15.18 37.244,15.866 38.257,16.634 L37.048,18.227 C35.62,17.145 34.14,16.228 32.197,15.21 C22.378,18.298 15.306,26.958 14.183,37.128 C16.242,36.711 18.219,36.484 20.414,36.43 L20.463,38.429 C18.163,38.486 16.187,38.73 14.027,39.205 C14.018,39.47 14,39.738 14,40 C14,48.658 18.283,56.636 25.327,61.447 C24.074,57.716 23.45,54.19 23.45,50.746 C23.45,48.782 23.788,47.169 24.145,45.462 C24.228,45.067 24.312,44.665 24.394,44.248 L26.357,44.635 C26.273,45.059 26.187,45.47 26.103,45.873 C25.753,47.545 25.45,48.989 25.45,50.746 C25.45,54.654 26.308,58.695 28.054,63.083 C31.773,65.014 35.789,66 40,66 C42.756,66 45.446,65.56 48.012,64.714 C49.019,62.727 49.766,60.852 50.39,58.699 L52.311,59.256 C51.855,60.826 51.332,62.253 50.709,63.677 C52.323,62.951 53.85,62.053 55.283,61.005 C54.938,60.159 54.568,59.318 54.159,58.499 L55.948,57.604 C56.296,58.3 56.615,59.012 56.92,59.728 C62.705,54.775 66,47.66 66,40 L66,40 Z M68,40 C68,48.727 64.034,56.799 57.121,62.149 C55.409,63.479 53.552,64.583 51.589,65.472 C50.756,65.85 49.908,66.2 49.036,66.494 C46.156,67.493 43.113,68 40,68 C35.4,68 30.832,66.854 26.788,64.686 C17.667,59.806 12,50.347 12,40 C12,39.314 12.018,38.792 12.059,38.309 C12.74,26.625 20.756,16.512 32.001,13.166 C34.562,12.393 37.255,12 40,12 C44.808,12 49.539,13.238 53.684,15.579 C62.513,20.525 68,29.884 68,40 L68,40 Z M37.314,25.463 L36,23.956 C33.758,25.912 32.014,27.989 29.977,31.126 L31.655,32.215 C33.583,29.244 35.223,27.288 37.314,25.463 L37.314,25.463 Z M34.275,38.427 L33.625,40.318 C38.218,41.895 42.225,44.411 46.234,48.236 L47.615,46.789 C43.389,42.758 39.15,40.101 34.275,38.427 L34.275,38.427 Z M47.646,26.668 C51.398,32.39 53.511,38.671 53.925,45.338 L51.929,45.462 C51.536,39.146 49.533,33.192 45.975,27.765 L47.646,26.668 Z" fill="#FFFFFF"/>
+    </symbol>
+
+    <!-- 6. Official NGINX Logo -->
+    <symbol id="icon-nginx" viewBox="31.76 0 448.51 512">
+      <path d="M255 0h1.2c6.1 2.9 12 6.1 17.8 9.7 66.2 38.1 132.4 76.1 198.6 114.2 5.2 2.8 8.2 8.5 7.6 14.4-.1 80.3 0 160.5-.1 240.7-.9 3.8-3.2 7.2-6.5 9.3L262.4 509.8c-3.5 2.7-8.2 2.9-12 .7-70.5-40.4-140.9-80.9-211.3-121.5-4.7-2.2-7.6-7-7.3-12.2V136.1c-.4-5.1 2.4-10 7.1-12.3 66.1-37.9 132.2-76 198.3-114 5.9-3.4 11.7-6.9 17.8-9.8" fill="#019639"/>
+      <path d="M123.7 156.1v198.6c-.2 7.4 2.6 14.6 7.8 19.9 10.1 10 25.8 11.5 37.7 3.8 7.8-5.3 12.5-14.2 12.5-23.6 0-47.9-.1-95.8 0-143.7 43.7 52.3 87.5 104.5 131.3 156.7 12.4 12.5 30.3 17.9 47.5 14.3 12.3-2.4 21.6-12.6 22.9-25.1.1-67.6.1-135.1 0-202.6-1.4-15.9-15.4-27.7-31.3-26.3-14 1.2-25.1 12.3-26.3 26.3 0 48.7-.3 97.3 0 146-42.9-50.6-85.3-101.6-128-152.4-11.5-14.7-30-22.1-48.4-19.2-14.2 1.4-25.1 13.1-25.7 27.3" fill="#FFFFFF"/>
+    </symbol>
+
+    <!-- 7. Key Icon (Auth Broker v2) -->
+    <g id="icon-key" viewBox="0 0 24 24">
+      <circle cx="7.5" cy="15.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="m21 2-9.6 9.6M15.5 7.5l2.5 2.5M18 5l2.5 2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <!-- 8. Package Icon (manufacturer-service / Mint) -->
+    <g id="icon-package" viewBox="0 0 24 24">
+      <path d="m16.5 9.4-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="12" y1="22.08" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+    </g>
+
+    <!-- 9. Shield Check Icon (consumer-service / Verification) -->
+    <g id="icon-shield-check" viewBox="0 0 24 24">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- 10. Zap Icon (admin-service / Recall / BlockChain Server) -->
+    <g id="icon-zap" viewBox="0 0 24 24">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
+    </g>
+
+    <!-- 11. Bot / Intelligence Icon (AI Surveillance) -->
+    <g id="icon-bot" viewBox="0 0 24 24">
+      <path d="M12 8V4H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <rect width="16" height="12" x="4" y="8" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M2 14h2M20 14h2M15 13v2M9 13v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <!-- 12. Chart Icon (Traditional ML / DBSCAN) -->
+    <g id="icon-chart" viewBox="0 0 24 24">
+      <path d="M3 3v18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="m19 9-5 5-4-4-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- 13. Eye Icon (Computer Vision / YOLO26) -->
+    <g id="icon-eye" viewBox="0 0 24 24">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+    </g>
+
+    <!-- 14. Lock Icon (pharma-core / Security Gateway) -->
+    <g id="icon-lock" viewBox="0 0 24 24">
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="currentColor" stroke-width="2"/>
+    </g>
+
+    <!-- 15. Blocks Icon (Hyperledger Fabric Validator) -->
+    <g id="icon-blocks" viewBox="0 0 24 24">
+      <rect width="7" height="7" x="14" y="3" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3" fill="none" stroke="currentColor" stroke-width="2"/>
+    </g>
+
+    <!-- 16. Alert Triangle Icon (Anomaly Warning) -->
+    <g id="icon-alert" viewBox="0 0 24 24">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+
+    <!-- 17. Check Circle Icon (100% Genuine) -->
+    <g id="icon-check" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- 18. Ban Icon (Recalled / Counterfeit) -->
+    <g id="icon-ban" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke="currentColor" stroke-width="2"/>
+    </g>
+
+    <!-- 19. Siren Icon (Emergency Freeze Cascade) -->
+    <g id="icon-siren" viewBox="0 0 24 24">
+      <path d="M7 18v-6a5 5 0 1 1 10 0v6" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="12" y1="2" x2="12" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <!-- 20. Search Icon (Verification Proof) -->
+    <g id="icon-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <!-- 21. Refresh Icon (Local Offline Sync) -->
+    <g id="icon-refresh" viewBox="0 0 24 24">
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M21 3v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M8 16H3v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- 2D Scanner Reticle -->
+    <g id="icon-scanner">
+      <path d="M 2 8 L 2 2 L 8 2" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M 18 2 L 24 2 L 24 8" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M 2 18 L 2 24 L 8 24" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M 18 24 L 24 24 L 24 18" fill="none" stroke="#000000" stroke-width="2.5" stroke-linecap="round"/>
+      <rect x="5" y="5" width="4" height="4" fill="#000000"/>
+      <rect x="17" y="5" width="4" height="4" fill="#000000"/>
+      <rect x="5" y="17" width="4" height="4" fill="#000000"/>
+      <rect x="12" y="12" width="3" height="3" fill="#000000"/>
+      <line x1="1" y1="13" x2="25" y2="13" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/>
+    </g>
+
+    <!-- 3D Database Cylinder -->
+    <g id="icon-db">
+      <ellipse cx="18" cy="9" rx="16" ry="6.5" fill="#38BDF8" stroke="#000000" stroke-width="2"/>
+      <path d="M 2 9 V 18 C 2 23 34 23 34 18 V 9" fill="#0284C7" stroke="#000000" stroke-width="2"/>
+      <path d="M 2 18 V 27 C 2 32 34 32 34 27 V 18" fill="#0369A1" stroke="#000000" stroke-width="2"/>
+      <line x1="8" y1="13" x2="22" y2="13" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="8" y1="22" x2="22" y2="22" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+    </g>
+  </defs>
+
+  <!-- Background Grid -->
+  <rect width="2560" height="890" fill="url(#dot-grid)"/>
+
+  <!-- ==================================================================== -->
+  <!-- LAYER 1: CONNECTIONS & ARROWS (BEHIND ALL NODES & BOXES)             -->
+  <!-- ==================================================================== -->
+  <g id="layer-connections">
+    <!-- 1. Client to CloudFront Conduits -->
+    <path d="M 290 82 L 320 82 L 320 300 L 350 300" fill="none" stroke="#000000" stroke-width="3.2" marker-end="url(#arr-black)"/>
+    <path d="M 290 179 L 350 320" fill="none" stroke="#000000" stroke-width="3.2" marker-end="url(#arr-black)"/>
+    <path d="M 290 276 L 350 347" fill="none" stroke="#000000" stroke-width="3.2" marker-end="url(#arr-black)"/>
+    <path d="M 290 500 L 350 375" fill="none" stroke="#000000" stroke-width="3.2" marker-end="url(#arr-black)"/>
+
+    <!-- CDSCO Regulator mTLS route to CloudFront -->
+    <path d="M 290 613 L 325 613 L 325 395 L 350 395" fill="none" stroke="#EF4444" stroke-width="3.5" marker-end="url(#arr-red)"/>
+
+    <!-- Local Chemist <-> SQLite Offline Buffer -->
+    <path d="M 170 313 L 170 353" fill="none" stroke="#16A34A" stroke-width="3.5" marker-end="url(#arr-green)"/>
+    <!-- SQLite Buffer -> Citizen Mobile App Cache -->
+    <path d="M 170 423 L 170 463" fill="none" stroke="#16A34A" stroke-width="3" stroke-dasharray="5 3" marker-end="url(#arr-green)"/>
+
+    <!-- CloudFront -> NGINX Ingress Hub -->
+    <path d="M 480 347 L 509 347" fill="none" stroke="#000000" stroke-width="4" marker-end="url(#arr-black)"/>
+
+    <!-- Auth Broker Flow ①: NGINX Ingress Introspects JWT with Auth Broker -->
+    <path d="M 585 271 L 585 78 L 740 78" fill="none" stroke="#0284C7" stroke-width="3.8" marker-end="url(#arr-blue)"/>
+
+    <!-- Auth Broker Flow ②: JWKS Distribution & Scoped M2M Tokens to Services -->
+    <path d="M 1075 111 L 1075 145" fill="none" stroke="#0284C7" stroke-width="3.5" stroke-dasharray="5 3" marker-end="url(#arr-blue)"/>
+
+    <!-- Auth Broker Flow ③: M2M Signer Authority to pharma-core -->
+    <path d="M 1240 78 L 1310 78 L 1310 190 L 1350 190" fill="none" stroke="#D97706" stroke-width="3.8" stroke-dasharray="5 3" marker-end="url(#arr-amber)"/>
+
+    <!-- NGINX Ingress Distribution Bus to 5 Microservices -->
+    <path d="M 661 347 L 730 347" fill="none" stroke="#000000" stroke-width="3.5"/>
+    <path d="M 730 178 L 730 498" fill="none" stroke="#000000" stroke-width="3.5"/>
+    <path d="M 730 178 L 950 178" fill="none" stroke="#0284C7" stroke-width="3.5" marker-end="url(#arr-blue)"/>
+    <path d="M 730 258 L 950 258" fill="none" stroke="#EF4444" stroke-width="3.5" marker-end="url(#arr-red)"/>
+    <path d="M 730 338 L 950 338" fill="none" stroke="#000000" stroke-width="3.5" marker-end="url(#arr-black)"/>
+    <path d="M 730 418 L 950 418" fill="none" stroke="#16A34A" stroke-width="3.5" marker-end="url(#arr-green)"/>
+    <path d="M 730 498 L 950 498" fill="none" stroke="#7C3AED" stroke-width="3.5" marker-end="url(#arr-purple)"/>
+
+    <!-- Services to pharma-core Gatekeeper -->
+    <path d="M 1200 258 L 1350 258" fill="none" stroke="#EF4444" stroke-width="3.8" marker-end="url(#arr-red)"/>
+    <path d="M 1200 338 L 1350 338" fill="none" stroke="#000000" stroke-width="3.8" marker-end="url(#arr-black)"/>
+    <path d="M 1200 418 L 1350 418" fill="none" stroke="#000000" stroke-width="3.8" marker-end="url(#arr-black)"/>
+    <path d="M 1200 498 L 1350 498" fill="none" stroke="#000000" stroke-width="3.8" marker-end="url(#arr-black)"/>
+
+    <!-- AI Surveillance Telemetry: From consumer-service straight down into Circular AI Hub -->
+    <path d="M 985 531 L 985 559" fill="none" stroke="#7C3AED" stroke-width="3" stroke-dasharray="5 3" marker-end="url(#arr-purple)"/>
+
+    <!-- AI Sub-engine Conduits -->
+    <path d="M 884 625 L 855 625" fill="none" stroke="#9333EA" stroke-width="3" marker-end="url(#arr-purple)"/>
+    <path d="M 1016 625 L 1040 625" fill="none" stroke="#9333EA" stroke-width="3" marker-end="url(#arr-purple)"/>
+
+    <!-- AI Anomaly Alert -> PharmaGov Service (:3005) -->
+    <path d="M 950 559 L 950 540 L 1315 540 L 1315 160 L 1200 160" fill="none" stroke="#D97706" stroke-width="3.5" stroke-dasharray="6 3" marker-end="url(#arr-amber)"/>
+
+    <!-- PharmaGov -> admin-service (Recall Trigger) -->
+    <path d="M 1075 211 L 1075 225" fill="none" stroke="#EF4444" stroke-width="3" marker-end="url(#arr-red)"/>
+
+    <!-- pharma-core -> Circular BlockChain Server (center: 1780, radius: 80 -> stops cleanly at 1690) -->
+    <path d="M 1530 85 L 1690 85" fill="none" stroke="#0284C7" stroke-width="3.8" marker-end="url(#arr-blue)"/>
+
+    <!-- Consensus Step ①: BlockChain Server -> peer0 Proposal (from 1862 to 1980) -->
+    <path d="M 1862 64 L 1980 64" fill="none" stroke="#0284C7" stroke-width="3.5" marker-end="url(#arr-blue)"/>
+    <!-- Consensus Step ②: peer0 -> BlockChain Server Endorsement (from 1980 to 1867) -->
+    <path d="M 1980 106 L 1867 106" fill="none" stroke="#16A34A" stroke-width="3.5" stroke-dasharray="5 3" marker-end="url(#arr-green)"/>
+    <!-- Consensus Step ③: BlockChain Server -> Orderer Broadcast Tx -->
+    <path d="M 1780 167 L 1780 205" fill="none" stroke="#D97706" stroke-width="3.5" marker-end="url(#arr-amber)"/>
+    <!-- Consensus Step ④: Orderer -> peer0 Deliver Block -->
+    <path d="M 2100 205 L 2100 135" fill="none" stroke="#D97706" stroke-width="3.5" stroke-dasharray="5 3" marker-end="url(#arr-amber)"/>
+    <!-- Consensus Step ⑤: peer0 -> CouchDB Commit -->
+    <path d="M 2220 90 L 2350 90" fill="none" stroke="#16A34A" stroke-width="3.5" marker-end="url(#arr-green)"/>
+
+    <!-- CouchDB Recall Cascade (Direct vertical line safely inside canvas) -->
+    <path d="M 2400 135 L 2400 575" fill="none" stroke="#EF4444" stroke-width="3.5" stroke-dasharray="6 4" marker-end="url(#arr-red)"/>
+
+    <!-- Emergency Network Freeze Feedback to POS & Citizen -->
+    <path d="M 1630 613 L 1540 613 L 1540 745 L 170 745 L 170 651" fill="none" stroke="#EF4444" stroke-width="3.5" stroke-dasharray="6 4" marker-end="url(#arr-red)"/>
+
+    <!-- Citizen Zero-Knowledge Verification Proof Conduit -->
+    <path d="M 1630 506 L 1500 506 L 1500 810 L 25 810 L 25 500 L 50 500" fill="none" stroke="#0284C7" stroke-width="3.5" stroke-dasharray="6 4" marker-end="url(#arr-blue)"/>
+  </g>
+
+
+  <!-- ==================================================================== -->
+  <!-- LAYER 2: NODES, CARDS & CIRCULAR HUBS (IN FRONT OF ARROWS)           -->
+  <!-- ==================================================================== -->
+  <g id="layer-nodes">
+
+    <!-- 1.1 Manufacturer Dashboard -->
+    <g id="card-client-mfg" transform="translate(50, 45)">
+      <rect x="5" y="5" width="240" height="74" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="240" height="74" rx="12" fill="#FEF08A" stroke="#000000" stroke-width="3"/>
+      <use href="#icon-factory" x="16" y="23" width="28" height="28" stroke="#000000"/>
+      <text x="58" y="33" font-size="18.5" font-weight="900" fill="#000000">Manufacturer</text>
+      <text x="58" y="54" font-size="13" font-weight="800" fill="#334155">Web Dashboard · Batch Mint</text>
+    </g>
+
+    <!-- 1.2 Shopkeeper Web Portal -->
+    <g id="card-client-shopkeeper" transform="translate(50, 142)">
+      <rect x="5" y="5" width="240" height="74" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="240" height="74" rx="12" fill="#FEF08A" stroke="#000000" stroke-width="3"/>
+      <use href="#icon-store" x="16" y="23" width="28" height="28" stroke="#000000"/>
+      <text x="58" y="33" font-size="18.5" font-weight="900" fill="#000000">Shopkeeper</text>
+      <text x="58" y="54" font-size="13" font-weight="800" fill="#334155">Web Portal · Inventory</text>
+    </g>
+
+    <!-- 1.3 Shopkeeper Mobile Intake (Chemist Scanner) -->
+    <g id="card-client-chemist" transform="translate(50, 239)">
+      <rect x="5" y="5" width="240" height="74" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="240" height="74" rx="12" fill="#FEF08A" stroke="#000000" stroke-width="3"/>
+      <use href="#icon-smartphone" x="18" y="23" width="28" height="28" stroke="#000000"/>
+      <text x="58" y="33" font-size="18.5" font-weight="900" fill="#000000">Chemist Scanner</text>
+      <text x="58" y="54" font-size="13" font-weight="900" fill="#B91C1C">React Native POS Scanner</text>
+    </g>
+
+    <!-- 1.4 Mobile Local SQLite Offline Buffer -->
+    <g id="card-client-sqlite" transform="translate(50, 353)">
+      <rect x="5" y="5" width="240" height="70" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="240" height="70" rx="12" fill="#FFFFFF" stroke="#16A34A" stroke-width="3"/>
+      <use href="#icon-db" x="14" y="16"/>
+      <text x="58" y="33" font-size="18" font-weight="900" fill="#000000">Mobile SQLite</text>
+      <text x="58" y="53" font-size="13" font-weight="800" fill="#334155">Offline Scan Buffer DB</text>
+    </g>
+
+    <!-- 1.5 Consumer Mobile Scanner (Citizen Mobile App) -->
+    <g id="card-client-consumer" transform="translate(50, 463)">
+      <rect x="5" y="5" width="240" height="74" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="240" height="74" rx="12" fill="#FEF08A" stroke="#000000" stroke-width="3"/>
+      <use href="#icon-smartphone" x="18" y="23" width="28" height="28" stroke="#000000"/>
+      <text x="58" y="33" font-size="18.5" font-weight="900" fill="#000000">Citizen Mobile App</text>
+      <text x="58" y="54" font-size="13" font-weight="900" fill="#7C3AED">Expo Mobile Verification App</text>
+    </g>
+
+    <!-- 1.6 CDSCO Regulator (National Admin Console) -->
+    <g id="card-client-admin" transform="translate(50, 575)">
+      <rect x="5" y="5" width="240" height="76" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="240" height="76" rx="12" fill="#FEE2E2" stroke="#EF4444" stroke-width="3.5"/>
+      <use href="#icon-landmark" x="16" y="24" width="28" height="28" stroke="#991B1B"/>
+      <text x="58" y="34" font-size="18.5" font-weight="900" fill="#000000">CDSCO Regulator</text>
+      <text x="58" y="56" font-size="13" font-weight="900" fill="#DC2626">National Admin Console</text>
+    </g>
+
+    <!-- 2. Edge CDN: CloudFront -->
+    <g id="card-edge-cdn" transform="translate(350, 260)">
+      <rect x="5" y="5" width="130" height="175" rx="14" fill="#000000"/>
+      <rect x="0" y="0" width="130" height="175" rx="14" fill="#FFFFFF" stroke="#0284C7" stroke-width="3.5"/>
+      <use href="#icon-aws-cloudfront" x="42" y="16" width="46" height="46"/>
+      <text x="65" y="80" font-size="19" font-weight="900" fill="#000000" text-anchor="middle">CloudFront</text>
+      <text x="65" y="103" font-family="monospace" font-size="13.5" font-weight="900" fill="#0284C7" text-anchor="middle">CDN Edge</text>
+      <line x1="16" y1="116" x2="114" y2="116" stroke="#E2E8F0" stroke-width="2.5"/>
+      <text x="65" y="139" font-family="monospace" font-size="12" font-weight="800" fill="#334155" text-anchor="middle">TLS 1.3 · WAF</text>
+      <text x="65" y="158" font-family="monospace" font-size="10.5" font-weight="900" fill="#0284C7" text-anchor="middle">DDoS Shield</text>
+    </g>
+
+    <!-- 3. Circular Ingress Hub: NGINX INGRESS -->
+    <g id="hub-nginx-router" transform="translate(585, 347)">
+      <circle cx="5" cy="5" r="76" fill="#000000"/>
+      <circle cx="0" cy="0" r="76" fill="#FEF08A" stroke="#000000" stroke-width="3.5"/>
+      <circle cx="0" cy="0" r="66" fill="none" stroke="#000000" stroke-width="2" stroke-dasharray="5 3"/>
+      <use href="#icon-nginx" x="-18" y="-40" width="36" height="36"/>
+      <text x="0" y="5" font-size="15.5" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="-0.2">NGINX INGRESS</text>
+      <text x="0" y="24" font-family="monospace" font-size="12" font-weight="900" fill="#0284C7" text-anchor="middle">App Router :443</text>
+      <text x="0" y="41" font-family="monospace" font-size="10.5" font-weight="800" fill="#15803D" text-anchor="middle">SSL &amp; /api/* Proxy</text>
+    </g>
+
+    <!-- 4. Auth Broker v2 -->
+    <g id="card-auth-broker" transform="translate(740, 45)">
+      <rect x="5" y="5" width="500" height="66" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="500" height="66" rx="12" fill="#FFFFFF" stroke="#0284C7" stroke-width="3.5"/>
+      <use href="#icon-key" x="18" y="20" width="28" height="28" stroke="#0284C7"/>
+      <text x="58" y="29" font-size="19" font-weight="900" fill="#000000">Auth Broker v2</text>
+      <text x="58" y="51" font-family="monospace" font-size="12" font-weight="800" fill="#334155">Central Identity &amp; Token Authority · RS256/ES256 JWKS Issuer</text>
+    </g>
+
+    <!-- 5. 5 Microservices Layer -->
+    <!-- 5.1 PharmaGov Service (:3005) -->
+    <g id="card-service-pharmagov" transform="translate(950, 145)">
+      <rect x="5" y="5" width="250" height="66" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="250" height="66" rx="12" fill="#FFFFFF" stroke="#0284C7" stroke-width="3"/>
+      <use href="#icon-landmark" x="14" y="21" width="24" height="24" stroke="#0284C7"/>
+      <text x="48" y="28" font-size="16.5" font-weight="900" fill="#000000">PharmaGov Service</text>
+      <text x="48" y="50" font-family="monospace" font-size="12" font-weight="800" fill="#0284C7">Port 3005 · Regulatory Gate</text>
+    </g>
+
+    <!-- 5.2 admin-service (:3001) -->
+    <g id="card-service-admin" transform="translate(950, 225)">
+      <rect x="5" y="5" width="250" height="66" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="250" height="66" rx="12" fill="#FFFFFF" stroke="#EF4444" stroke-width="3"/>
+      <use href="#icon-zap" x="14" y="21" width="24" height="24" fill="#EF4444" stroke="#EF4444"/>
+      <text x="48" y="28" font-size="16.5" font-weight="900" fill="#000000">admin-service (:3001)</text>
+      <text x="48" y="50" font-family="monospace" font-size="12" font-weight="800" fill="#DC2626">Master Control · 1-Click Recall</text>
+    </g>
+
+    <!-- 5.3 manufacturer-service (:3002) -->
+    <g id="card-service-mfg" transform="translate(950, 305)">
+      <rect x="5" y="5" width="250" height="66" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="250" height="66" rx="12" fill="#FFFFFF" stroke="#000000" stroke-width="2.8"/>
+      <use href="#icon-package" x="14" y="21" width="24" height="24" stroke="#000000"/>
+      <text x="48" y="28" font-size="16.5" font-weight="900" fill="#000000">manufacturer-service</text>
+      <text x="48" y="50" font-family="monospace" font-size="12" font-weight="800" fill="#0284C7">Port 3002 · Serialization</text>
+    </g>
+
+    <!-- 5.4 shopkeeper-service (:3003) -->
+    <g id="card-service-shop" transform="translate(950, 385)">
+      <rect x="5" y="5" width="250" height="66" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="250" height="66" rx="12" fill="#FFFFFF" stroke="#000000" stroke-width="2.8"/>
+      <use href="#icon-store" x="14" y="21" width="24" height="24" stroke="#000000"/>
+      <text x="48" y="28" font-size="16.5" font-weight="900" fill="#000000">shopkeeper-service</text>
+      <text x="48" y="50" font-family="monospace" font-size="12" font-weight="800" fill="#15803D">Port 3003 · Custody &amp; POS</text>
+    </g>
+
+    <!-- 5.5 consumer-service (:3004) -->
+    <g id="card-service-consumer" transform="translate(950, 465)">
+      <rect x="5" y="5" width="250" height="66" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="250" height="66" rx="12" fill="#FFFFFF" stroke="#000000" stroke-width="2.8"/>
+      <use href="#icon-shield-check" x="14" y="21" width="24" height="24" stroke="#000000"/>
+      <text x="48" y="28" font-size="16.5" font-weight="900" fill="#000000">consumer-service</text>
+      <text x="48" y="50" font-family="monospace" font-size="12" font-weight="800" fill="#7C3AED">Port 3004 · Verification</text>
+    </g>
+
+    <!-- 5.6 CIRCULAR AI SURVEILLANCE ENGINE HUB -->
+    <g id="hub-ai-surveillance" transform="translate(950, 625)">
+      <circle cx="5" cy="5" r="66" fill="#000000"/>
+      <circle cx="0" cy="0" r="66" fill="#FEF08A" stroke="#000000" stroke-width="3.5"/>
+      <circle cx="0" cy="0" r="57" fill="none" stroke="#000000" stroke-width="1.8" stroke-dasharray="5 3"/>
+      <use href="#icon-bot" x="-16" y="-36" width="32" height="32" stroke="#000000"/>
+      <text x="0" y="5" font-size="13" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="-0.2">AI SURVEILLANCE</text>
+      <text x="0" y="23" font-family="monospace" font-size="11" font-weight="900" fill="#7C3AED" text-anchor="middle">FastAPI :5000</text>
+      <text x="0" y="38" font-family="monospace" font-size="9" font-weight="800" fill="#000000" text-anchor="middle">Vision &amp; Velocity</text>
+    </g>
+
+    <!-- AI Sub-engine 1: TRADITIONAL ML (w: 235) -->
+    <g id="card-ai-traditional" transform="translate(620, 596)">
+      <rect x="4" y="4" width="235" height="58" rx="10" fill="#000000"/>
+      <rect x="0" y="0" width="235" height="58" rx="10" fill="#FFFFFF" stroke="#9333EA" stroke-width="2.5"/>
+      <use href="#icon-chart" x="12" y="17" width="24" height="24" stroke="#6B21A8"/>
+      <text x="42" y="25" font-size="12.5" font-weight="900" fill="#000000">DBSCAN &amp; Isolation Forest</text>
+      <text x="42" y="45" font-family="monospace" font-size="10.5" font-weight="900" fill="#DC2626">Geo-Velocity &amp; Outlier ML</text>
+    </g>
+
+    <!-- AI Sub-engine 2: COMPUTER VISION (w: 220) -->
+    <g id="card-ai-vision" transform="translate(1040, 596)">
+      <rect x="4" y="4" width="220" height="58" rx="10" fill="#000000"/>
+      <rect x="0" y="0" width="220" height="58" rx="10" fill="#FFFFFF" stroke="#9333EA" stroke-width="2.5"/>
+      <use href="#icon-eye" x="12" y="17" width="24" height="24" stroke="#6B21A8"/>
+      <text x="42" y="25" font-size="13" font-weight="900" fill="#000000">YOLO26 &amp; EasyOCR</text>
+      <text x="42" y="45" font-family="monospace" font-size="10.5" font-weight="900" fill="#2563EB">Vision &amp; Hologram Inspection</text>
+    </g>
+
+    <!-- 6. Gatekeeper: pharma-core (:4000) -->
+    <g id="card-pharma-core" transform="translate(1350, 145)">
+      <rect x="6" y="6" width="180" height="386" rx="14" fill="#000000"/>
+      <rect x="0" y="0" width="180" height="386" rx="14" fill="#FFFFFF" stroke="#D97706" stroke-width="4"/>
+      <rect x="15" y="-13" width="150" height="24" rx="5" fill="#000000"/>
+      <text x="25" y="4" font-size="10.5" font-weight="900" fill="#FDE68A" letter-spacing="1">CRYPTO GATEWAY</text>
+
+      <use href="#icon-lock" x="72" y="16" width="36" height="36" stroke="#D97706"/>
+      <text x="90" y="85" font-size="21" font-weight="900" fill="#000000" text-anchor="middle">pharma-core</text>
+      <text x="90" y="108" font-family="monospace" font-size="15" font-weight="900" fill="#D97706" text-anchor="middle">Port :4000</text>
+      <text x="90" y="130" font-family="monospace" font-size="12" font-weight="700" fill="#64748B" text-anchor="middle">Crypto Vault &amp; Signer</text>
+
+      <line x1="16" y1="148" x2="164" y2="148" stroke="#E2E8F0" stroke-width="2.5"/>
+
+      <!-- Prominent SOLE CLIENT badge -->
+      <rect x="12" y="166" width="156" height="42" rx="8" fill="#FEF3C7" stroke="#D97706" stroke-width="2.5"/>
+      <text x="90" y="192" font-family="monospace" font-size="11.5" font-weight="900" fill="#92400E" text-anchor="middle">SOLE FABRIC CLIENT</text>
+
+      <text x="90" y="244" font-family="monospace" font-size="12" font-weight="800" fill="#0F172A" text-anchor="middle">ECDSA Secp256k1</text>
+      <text x="90" y="268" font-family="monospace" font-size="12" font-weight="900" fill="#DC2626" text-anchor="middle">M2M JWT Tx Signer</text>
+
+      <line x1="16" y1="288" x2="164" y2="288" stroke="#E2E8F0" stroke-width="2.5"/>
+
+      <text x="90" y="318" font-family="monospace" font-size="11.5" font-weight="800" fill="#334155" text-anchor="middle">Non-Repudiation</text>
+      <text x="90" y="338" font-family="monospace" font-size="11" font-weight="800" fill="#15803D" text-anchor="middle">Zero Gas Overhead</text>
+      <text x="90" y="358" font-family="monospace" font-size="11" font-weight="800" fill="#0284C7" text-anchor="middle">Strict Audit Trail</text>
+    </g>
+
+    <!-- 7.1 CIRCULAR BLOCKCHAIN SERVER (FORMERLY PHARMA-BACKEND) -->
+    <g id="hub-blockchain-server" transform="translate(1780, 85)">
+      <circle cx="5" cy="5" r="80" fill="#000000"/>
+      <circle cx="0" cy="0" r="80" fill="#FFFFFF" stroke="#000000" stroke-width="4"/>
+      <circle cx="0" cy="0" r="70" fill="none" stroke="#0284C7" stroke-width="1.8" stroke-dasharray="5 3"/>
+      <use href="#icon-zap" x="-14" y="-40" width="28" height="28" fill="#D97706" stroke="#D97706"/>
+      <text x="0" y="5" font-size="15" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="-0.2">BlockChain Server</text>
+      <text x="0" y="26" font-family="monospace" font-size="12" font-weight="900" fill="#0284C7" text-anchor="middle">Spring Boot :8080</text>
+      <text x="0" y="44" font-family="monospace" font-size="10.5" font-weight="800" fill="#475569" text-anchor="middle">pharma-backend</text>
+    </g>
+
+    <!-- 7.2 peer0.pharmachain.net (:7051) -->
+    <g id="card-peer0" transform="translate(1980, 45)">
+      <rect x="5" y="5" width="240" height="90" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="240" height="90" rx="12" fill="#FFFFFF" stroke="#16A34A" stroke-width="3"/>
+      <use href="#icon-blocks" x="16" y="28" width="28" height="28" stroke="#15803D"/>
+      <text x="56" y="34" font-size="17.5" font-weight="900" fill="#000000">peer0.pharmachain.net</text>
+      <text x="56" y="56" font-family="monospace" font-size="13" font-weight="900" fill="#000000">Port 7051 · Validator</text>
+      <text x="56" y="76" font-family="monospace" font-size="11.5" font-weight="900" fill="#14532D">CONTRACT: pharmacc.jar</text>
+    </g>
+
+    <!-- 7.3 couchdb0 (:5984) -->
+    <g id="card-couchdb" transform="translate(2350, 45)">
+      <rect x="5" y="5" width="180" height="90" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="180" height="90" rx="12" fill="#FFFFFF" stroke="#0284C7" stroke-width="3"/>
+      <use href="#icon-db" x="14" y="26"/>
+      <text x="54" y="34" font-size="17.5" font-weight="900" fill="#000000">couchdb0</text>
+      <text x="54" y="56" font-family="monospace" font-size="12.5" font-weight="900" fill="#000000">World State DB</text>
+      <text x="54" y="76" font-family="monospace" font-size="11" font-weight="800" fill="#0369A1">Port :5984 (MVCC)</text>
+    </g>
+
+    <!-- 7.4 orderer.pharmachain.net (:7050) -->
+    <g id="card-orderer" transform="translate(1630, 205)">
+      <rect x="5" y="5" width="590" height="72" rx="12" fill="#000000"/>
+      <rect x="0" y="0" width="590" height="72" rx="12" fill="#FFFFFF" stroke="#D97706" stroke-width="3"/>
+      <use href="#icon-landmark" x="16" y="22" width="28" height="28" stroke="#D97706"/>
+      <text x="56" y="32" font-size="17.5" font-weight="900" fill="#000000">orderer.pharmachain.net (:7050)</text>
+      <text x="56" y="54" font-family="monospace" font-size="12.5" font-weight="800" fill="#D97706">
+        Raft Consensus Ordering Engine · Crash-Fault-Tolerant (CFT)
+      </text>
+    </g>
+
+    <!-- 7.5 Immutable State Machine Box -->
+    <g id="flow-state-machine" transform="translate(1630, 295)">
+      <rect x="6" y="6" width="790" height="142" rx="14" fill="#000000"/>
+      <rect x="0" y="0" width="790" height="142" rx="14" fill="#FFFFFF" stroke="#000000" stroke-width="3.5"/>
+      <rect x="18" y="-14" width="235" height="26" rx="6" fill="#000000"/>
+      <text x="28" y="4" font-size="11.5" font-weight="900" fill="#FEF08A" letter-spacing="1">ON-CHAIN STATE MACHINE</text>
+
+      <!-- State 1: MINTED -->
+      <g transform="translate(18, 22)">
+        <rect x="3" y="3" width="160" height="54" rx="8" fill="#000000"/>
+        <rect x="0" y="0" width="160" height="54" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="2.5"/>
+        <text x="80" y="25" font-size="14.5" font-weight="900" fill="#0369A1" text-anchor="middle">MINTED</text>
+        <text x="80" y="44" font-family="monospace" font-size="10" font-weight="800" fill="#0284C7" text-anchor="middle">Genesis Batch Tx</text>
+      </g>
+
+      <!-- Transition 1 -> 2 -->
+      <path d="M 181 49 L 209 49" fill="none" stroke="#000000" stroke-width="3.2" marker-end="url(#arr-black)"/>
+
+      <!-- State 2: SHOPKEEPER INTAKE -->
+      <g transform="translate(209, 22)">
+        <rect x="3" y="3" width="168" height="54" rx="8" fill="#000000"/>
+        <rect x="0" y="0" width="168" height="54" rx="8" fill="#FEF08A" stroke="#000000" stroke-width="2.5"/>
+        <text x="84" y="25" font-size="14" font-weight="900" fill="#000000" text-anchor="middle">SHOPKEEPER</text>
+        <text x="84" y="44" font-family="monospace" font-size="10" font-weight="800" fill="#475569" text-anchor="middle">Custody Transfer</text>
+      </g>
+
+      <!-- Transition 2 -> 3 -->
+      <path d="M 380 49 L 408 49" fill="none" stroke="#000000" stroke-width="3.2" marker-end="url(#arr-black)"/>
+
+      <!-- State 3: SOLD -->
+      <g transform="translate(408, 22)">
+        <rect x="3" y="3" width="165" height="54" rx="8" fill="#000000"/>
+        <rect x="0" y="0" width="165" height="54" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="2.5"/>
+        <text x="82" y="25" font-size="14.5" font-weight="900" fill="#14532D" text-anchor="middle">SOLD</text>
+        <text x="82" y="44" font-family="monospace" font-size="10" font-weight="800" fill="#16A34A" text-anchor="middle">Dispensed to POS</text>
+      </g>
+
+      <!-- Transition 3 -> 4 -->
+      <path d="M 576 49 L 604 49" fill="none" stroke="#000000" stroke-width="3.2" marker-end="url(#arr-black)"/>
+
+      <!-- State 4: TERMINAL LOCK -->
+      <g transform="translate(604, 22)">
+        <rect x="3" y="3" width="168" height="54" rx="8" fill="#000000"/>
+        <rect x="0" y="0" width="168" height="54" rx="8" fill="#FEE2E2" stroke="#EF4444" stroke-width="2.5"/>
+        <text x="84" y="25" font-size="13.5" font-weight="900" fill="#991B1B" text-anchor="middle">TERMINAL LOCK</text>
+        <text x="84" y="44" font-family="monospace" font-size="10" font-weight="900" fill="#DC2626" text-anchor="middle">Anti-Double-Spend</text>
+      </g>
+
+      <!-- Bottom Action Pill: 1-Click Recall -->
+      <g transform="translate(18, 90)">
+        <rect x="3" y="3" width="754" height="38" rx="8" fill="#000000"/>
+        <rect x="0" y="0" width="754" height="38" rx="8" fill="#FEE2E2" stroke="#EF4444" stroke-width="2.2"/>
+        <use href="#icon-zap" x="14" y="9" width="20" height="20" fill="#B91C1C" stroke="#B91C1C"/>
+        <text x="390" y="24" font-family="monospace" font-size="12.5" font-weight="900" fill="#B91C1C" text-anchor="middle">
+          1-CLICK NATIONWIDE RECALL: Immediate Ledger Invalidation Across Network
+        </text>
+      </g>
+    </g>
+
+    <!-- 7.6 Citizen Verification Outcomes -->
+    <g id="flow-verification-outcomes" transform="translate(1630, 460)">
+      <rect x="6" y="6" width="790" height="92" rx="14" fill="#000000"/>
+      <rect x="0" y="0" width="790" height="92" rx="14" fill="#FFFFFF" stroke="#000000" stroke-width="3.5"/>
+      <rect x="18" y="-14" width="235" height="26" rx="6" fill="#000000"/>
+      <text x="28" y="4" font-size="11.5" font-weight="900" fill="#38BDF8" letter-spacing="1">VERIFICATION OUTCOMES</text>
+
+      <!-- 100% Genuine -->
+      <g transform="translate(18, 19)">
+        <rect x="3" y="3" width="235" height="54" rx="10" fill="#000000"/>
+        <rect x="0" y="0" width="235" height="54" rx="10" fill="#DCFCE7" stroke="#16A34A" stroke-width="2.5"/>
+        <use href="#icon-check" x="14" y="15" width="24" height="24" stroke="#15803D"/>
+        <text x="46" y="25" font-size="14" font-weight="900" fill="#14532D">100% GENUINE</text>
+        <text x="46" y="43" font-family="monospace" font-size="11" font-weight="800" fill="#166534">Ledger Match Confirmed</text>
+      </g>
+
+      <!-- Suspicious Anomaly -->
+      <g transform="translate(268, 19)">
+        <rect x="3" y="3" width="255" height="54" rx="10" fill="#000000"/>
+        <rect x="0" y="0" width="255" height="54" rx="10" fill="#FEF08A" stroke="#000000" stroke-width="2.5"/>
+        <use href="#icon-alert" x="14" y="15" width="24" height="24" stroke="#D97706"/>
+        <text x="46" y="25" font-size="14" font-weight="900" fill="#000000">SUSPICIOUS / ANOMALY</text>
+        <text x="46" y="43" font-family="monospace" font-size="11" font-weight="800" fill="#475569">ML Flagged Anomaly</text>
+      </g>
+
+      <!-- Recalled / Counterfeit -->
+      <g transform="translate(538, 19)">
+        <rect x="3" y="3" width="234" height="54" rx="10" fill="#000000"/>
+        <rect x="0" y="0" width="234" height="54" rx="10" fill="#FEE2E2" stroke="#EF4444" stroke-width="2.5"/>
+        <use href="#icon-ban" x="14" y="15" width="24" height="24" stroke="#EF4444"/>
+        <text x="46" y="25" font-size="14" font-weight="900" fill="#991B1B">RECALLED</text>
+        <text x="46" y="43" font-family="monospace" font-size="11" font-weight="900" fill="#DC2626">Emergency Alert &amp; Lock</text>
+      </g>
+    </g>
+
+    <!-- 7.7 Emergency Network Freeze Alert Trigger -->
+    <g id="card-emergency-freeze" transform="translate(1630, 575)">
+      <rect x="5" y="5" width="790" height="76" rx="14" fill="#000000"/>
+      <rect x="0" y="0" width="790" height="76" rx="14" fill="#FEE2E2" stroke="#EF4444" stroke-width="3.5"/>
+      <use href="#icon-siren" x="18" y="24" width="28" height="28" stroke="#EF4444"/>
+      <text x="58" y="34" font-size="17.5" font-weight="900" fill="#991B1B">EMERGENCY NETWORK FREEZE TRIGGER</text>
+      <text x="58" y="56" font-family="monospace" font-size="12.5" font-weight="800" fill="#DC2626">
+        CDSCO Smart Revoke ➔ POS Hardware Lock &amp; Patient Mobile SMS Flash Alert
+      </text>
+    </g>
+
+  </g>
+
+
+  <!-- ==================================================================== -->
+  <!-- LAYER 3: PILL BADGES & INTERACTIVE LABELS (TOPMOST LAYER)            -->
+  <!-- ==================================================================== -->
+  <g id="layer-badges">
+
+    <!-- CDSCO mTLS Ingress Route Badge -->
+    <g transform="translate(245, 638)">
+      <rect x="0" y="0" width="150" height="22" rx="4" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.4"/>
+      <use href="#icon-landmark" x="8" y="3" width="16" height="16" stroke="#B91C1C"/>
+      <text x="82" y="15" font-family="monospace" font-size="9.5" font-weight="900" fill="#B91C1C" text-anchor="middle">CDSCO mTLS Route</text>
+    </g>
+
+    <!-- Chemist Offline Sync Badges -->
+    <g transform="translate(90, 321)">
+      <rect x="0" y="0" width="165" height="22" rx="5" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.2"/>
+      <use href="#icon-refresh" x="8" y="3" width="16" height="16" stroke="#14532D"/>
+      <text x="90" y="15" font-family="monospace" font-size="11" font-weight="900" fill="#14532D" text-anchor="middle">Local Offline Sync</text>
+    </g>
+    <g transform="translate(90, 431)">
+      <rect x="0" y="0" width="165" height="22" rx="5" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.2"/>
+      <use href="#icon-package" x="8" y="3" width="16" height="16" stroke="#14532D"/>
+      <text x="90" y="15" font-family="monospace" font-size="11" font-weight="900" fill="#14532D" text-anchor="middle">Offline Scan Cache</text>
+    </g>
+
+    <!-- Auth Broker Step ① Badge -->
+    <g transform="translate(475, 140)">
+      <rect x="3" y="3" width="220" height="28" rx="6" fill="#000000"/>
+      <rect x="0" y="0" width="220" height="28" rx="6" fill="#E0F2FE" stroke="#0284C7" stroke-width="2"/>
+      <use href="#icon-lock" x="10" y="5" width="18" height="18" stroke="#0369A1"/>
+      <text x="120" y="19" font-family="monospace" font-size="10.5" font-weight="900" fill="#0369A1" text-anchor="middle">
+        ① Token Introspection (JWT)
+      </text>
+    </g>
+
+    <!-- Auth Broker Step ② Badge -->
+    <g transform="translate(945, 118)">
+      <rect x="2" y="2" width="260" height="24" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="260" height="24" rx="5" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.8"/>
+      <use href="#icon-key" x="8" y="3" width="18" height="18" stroke="#0369A1"/>
+      <text x="140" y="16" font-family="monospace" font-size="10" font-weight="900" fill="#0369A1" text-anchor="middle">
+        ② JWKS Distribution &amp; Scoped M2M
+      </text>
+    </g>
+
+    <!-- Auth Broker Step ③ Badge -->
+    <g transform="translate(1160, 50)">
+      <rect x="2" y="2" width="185" height="26" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="185" height="26" rx="5" fill="#FEF3C7" stroke="#D97706" stroke-width="1.8"/>
+      <use href="#icon-shield-check" x="8" y="4" width="18" height="18" stroke="#92400E"/>
+      <text x="102" y="17" font-family="monospace" font-size="9.5" font-weight="900" fill="#92400E" text-anchor="middle">
+        ③ M2M Signer JWKS
+      </text>
+    </g>
+
+    <!-- Ingress Branch Badges -->
+    <g transform="translate(795, 164)">
+      <rect x="2" y="2" width="90" height="26" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="90" height="26" rx="5" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.8"/>
+      <use href="#icon-landmark" x="8" y="4" width="18" height="18" stroke="#0369A1"/>
+      <text x="52" y="17" font-family="monospace" font-size="12" font-weight="900" fill="#0369A1" text-anchor="middle">/gov/*</text>
+    </g>
+    <g transform="translate(790, 244)">
+      <rect x="2" y="2" width="100" height="26" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="100" height="26" rx="5" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.8"/>
+      <use href="#icon-zap" x="8" y="4" width="18" height="18" fill="#B91C1C" stroke="#B91C1C"/>
+      <text x="56" y="17" font-family="monospace" font-size="12" font-weight="900" fill="#B91C1C" text-anchor="middle">/admin/*</text>
+    </g>
+    <g transform="translate(765, 324)">
+      <rect x="2" y="2" width="155" height="26" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="155" height="26" rx="5" fill="#FEF08A" stroke="#000000" stroke-width="1.8"/>
+      <use href="#icon-package" x="8" y="4" width="18" height="18" stroke="#000000"/>
+      <text x="86" y="17" font-family="monospace" font-size="11.5" font-weight="900" fill="#000000" text-anchor="middle">/manufacturer/*</text>
+    </g>
+    <g transform="translate(775, 404)">
+      <rect x="2" y="2" width="140" height="26" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="140" height="26" rx="5" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.8"/>
+      <use href="#icon-store" x="8" y="4" width="18" height="18" stroke="#14532D"/>
+      <text x="78" y="17" font-family="monospace" font-size="11.5" font-weight="900" fill="#14532D" text-anchor="middle">/shopkeeper/*</text>
+    </g>
+    <g transform="translate(785, 484)">
+      <rect x="2" y="2" width="130" height="26" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="130" height="26" rx="5" fill="#F3E8FF" stroke="#7C3AED" stroke-width="1.8"/>
+      <use href="#icon-search" x="8" y="4" width="18" height="18" stroke="#6B21A8"/>
+      <text x="72" y="17" font-family="monospace" font-size="11.5" font-weight="900" fill="#6B21A8" text-anchor="middle">/consumer/*</text>
+    </g>
+
+    <!-- Service Action Badges -->
+    <g transform="translate(1215, 232)">
+      <rect x="2" y="2" width="80" height="24" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="80" height="24" rx="5" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.6"/>
+      <use href="#icon-zap" x="6" y="3" width="16" height="16" fill="#B91C1C" stroke="#B91C1C"/>
+      <text x="46" y="16" font-family="monospace" font-size="10.5" font-weight="900" fill="#B91C1C" text-anchor="middle">Recall</text>
+    </g>
+    <g transform="translate(1215, 312)">
+      <rect x="2" y="2" width="80" height="24" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="80" height="24" rx="5" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.6"/>
+      <use href="#icon-package" x="6" y="3" width="16" height="16" stroke="#0369A1"/>
+      <text x="46" y="16" font-family="monospace" font-size="10.5" font-weight="900" fill="#0369A1" text-anchor="middle">Mint</text>
+    </g>
+    <g transform="translate(1215, 392)">
+      <rect x="2" y="2" width="80" height="24" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="80" height="24" rx="5" fill="#FEF08A" stroke="#000000" stroke-width="1.6"/>
+      <use href="#icon-store" x="6" y="3" width="16" height="16" stroke="#000000"/>
+      <text x="46" y="16" font-family="monospace" font-size="10.5" font-weight="900" fill="#000000" text-anchor="middle">Sell</text>
+    </g>
+    <g transform="translate(1215, 472)">
+      <rect x="2" y="2" width="80" height="24" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="80" height="24" rx="5" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.6"/>
+      <use href="#icon-shield-check" x="6" y="3" width="16" height="16" stroke="#14532D"/>
+      <text x="48" y="16" font-family="monospace" font-size="10.5" font-weight="900" fill="#14532D" text-anchor="middle">Verify</text>
+    </g>
+
+    <!-- AI Telemetry Badge -->
+    <g transform="translate(945, 536)">
+      <rect x="0" y="0" width="80" height="20" rx="4" fill="#F3E8FF" stroke="#7C3AED" stroke-width="1.2"/>
+      <text x="40" y="14" font-family="monospace" font-size="9" font-weight="900" fill="#6B21A8" text-anchor="middle">Telemetry</text>
+    </g>
+
+    <!-- AI Anomaly Alert Badge -->
+    <g transform="translate(1202, 147)">
+      <rect x="2" y="2" width="125" height="25" rx="5" fill="#000000"/>
+      <rect x="0" y="0" width="125" height="25" rx="5" fill="#FEF3C7" stroke="#D97706" stroke-width="1.8"/>
+      <use href="#icon-alert" x="6" y="3" width="18" height="18" stroke="#92400E"/>
+      <text x="68" y="17" font-family="monospace" font-size="9.5" font-weight="900" fill="#92400E" text-anchor="middle">
+        Flag Anomaly
+      </text>
+    </g>
+
+    <!-- Authenticated Batch Tx Badge -->
+    <g transform="translate(1520, 40)">
+      <rect x="2" y="2" width="165" height="28" rx="6" fill="#000000"/>
+      <rect x="0" y="0" width="165" height="28" rx="6" fill="#E0F2FE" stroke="#0284C7" stroke-width="2"/>
+      <use href="#icon-zap" x="8" y="5" width="18" height="18" fill="#0369A1" stroke="#0369A1"/>
+      <text x="94" y="19" font-family="monospace" font-size="10.5" font-weight="900" fill="#0369A1" text-anchor="middle">
+        Authenticated Batch Tx
+      </text>
+    </g>
+
+    <!-- Consensus Step ①: Proposal Badge -->
+    <g transform="translate(1872, 38)">
+      <rect x="0" y="0" width="94" height="24" rx="5" fill="#E0F2FE" stroke="#0284C7" stroke-width="1.6"/>
+      <text x="47" y="17" font-family="monospace" font-size="11" font-weight="900" fill="#0369A1" text-anchor="middle">① Proposal</text>
+    </g>
+
+    <!-- Consensus Step ②: Endorsement Badge -->
+    <g transform="translate(1872, 114)">
+      <rect x="0" y="0" width="94" height="24" rx="5" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.6"/>
+      <text x="47" y="17" font-family="monospace" font-size="11" font-weight="900" fill="#14532D" text-anchor="middle">② Endorse</text>
+    </g>
+
+    <!-- Consensus Step ③: Broadcast Tx Badge -->
+    <g transform="translate(1720, 172)">
+      <rect x="0" y="0" width="120" height="24" rx="5" fill="#FEF3C7" stroke="#D97706" stroke-width="1.4"/>
+      <text x="60" y="17" font-family="monospace" font-size="10" font-weight="900" fill="#92400E" text-anchor="middle">③ Broadcast Tx</text>
+    </g>
+
+    <!-- Consensus Step ④: Deliver Block Badge -->
+    <g transform="translate(2040, 158)">
+      <rect x="0" y="0" width="120" height="24" rx="5" fill="#FEF3C7" stroke="#D97706" stroke-width="1.4"/>
+      <text x="60" y="17" font-family="monospace" font-size="10" font-weight="900" fill="#92400E" text-anchor="middle">④ Deliver Block</text>
+    </g>
+
+    <!-- Consensus Step ⑤: Commit Badge -->
+    <g transform="translate(2242, 62)">
+      <rect x="0" y="0" width="86" height="24" rx="5" fill="#DCFCE7" stroke="#16A34A" stroke-width="1.6"/>
+      <text x="43" y="17" font-family="monospace" font-size="11" font-weight="900" fill="#14532D" text-anchor="middle">⑤ Commit</text>
+    </g>
+
+    <!-- CouchDB Recall Cascade Badge (Centered safely inside canvas) -->
+    <g transform="translate(2325, 250)">
+      <rect x="2" y="2" width="150" height="28" rx="6" fill="#000000"/>
+      <rect x="0" y="0" width="150" height="28" rx="6" fill="#FEE2E2" stroke="#EF4444" stroke-width="1.8"/>
+      <use href="#icon-siren" x="8" y="5" width="18" height="18" stroke="#B91C1C"/>
+      <text x="82" y="19" font-family="monospace" font-size="10.5" font-weight="900" fill="#B91C1C" text-anchor="middle">
+        CouchDB Recall Emit
+      </text>
+    </g>
+
+    <!-- Emergency Network Freeze Feedback Badge -->
+    <g transform="translate(720, 727)">
+      <rect x="3" y="3" width="370" height="34" rx="8" fill="#000000"/>
+      <rect x="0" y="0" width="370" height="34" rx="8" fill="#FEE2E2" stroke="#EF4444" stroke-width="2.5"/>
+      <use href="#icon-siren" x="12" y="7" width="20" height="20" stroke="#B91C1C"/>
+      <text x="195" y="22" font-family="monospace" font-size="12" font-weight="900" fill="#B91C1C" text-anchor="middle">
+        Emergency POS Freeze &amp; Citizen Flash Alert
+      </text>
+    </g>
+
+    <!-- Zero-Knowledge Verification Proof Badge -->
+    <g transform="translate(680, 792)">
+      <rect x="3" y="3" width="330" height="34" rx="8" fill="#000000"/>
+      <rect x="0" y="0" width="330" height="34" rx="8" fill="#E0F2FE" stroke="#0284C7" stroke-width="2.5"/>
+      <use href="#icon-search" x="12" y="7" width="20" height="20" stroke="#0369A1"/>
+      <text x="175" y="22" font-family="monospace" font-size="12" font-weight="900" fill="#0369A1" text-anchor="middle">
+        Zero-Knowledge Verification Proof
+      </text>
+    </g>
+
+  </g>
+
+</svg>

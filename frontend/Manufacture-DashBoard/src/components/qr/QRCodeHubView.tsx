@@ -54,7 +54,8 @@ export const QRCodeHubView: React.FC = () => {
 
   const liveJWT = livePackData?.signedToken || null;
   const isMinted = selectedBatch?.mintStatus === 'MINTED' || selectedBatch?.mintStatus === 'RECALLED';
-  const qrCodeValue = livePackData?.verifyUrl || (liveJWT ? `https://pharmachain.gov.in/verify/${livePackData?.packHash || 'pack'}?token=${liveJWT}` : '');
+  const qrCodeValue = livePackData?.verifyUrl || (liveJWT ? (selectedBatch?.feistelBatchId ? `https://pharmachain.gov.in/v?t=${liveJWT}` : `https://pharmachain.gov.in/verify/${livePackData?.packHash || 'pack'}?token=${liveJWT}`) : '');
+
 
   const handleCopyJWT = () => {
     if (!liveJWT) {
@@ -367,34 +368,50 @@ export const QRCodeHubView: React.FC = () => {
                   1. JOSE Header (`ES256`)
                 </span>
                 <pre className="text-cyan-400 text-[11px] font-mono">
-                  {JSON.stringify({ alg: 'ES256', kid: profile.keyId, typ: 'JWT' }, null, 2)}
+                  {JSON.stringify({
+                    alg: 'ES256',
+                    kid: selectedBatch?.feistelBatchId || profile.keyId,
+                    typ: 'JWT'
+                  }, null, 2)}
                 </pre>
               </div>
 
               <div className="p-3 rounded-xl bg-[var(--bg-element)] border border-[var(--border)]">
                 <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold block mb-1">
-                  2. Tier-1 Physical Pack Claims (Signed Payload)
+                  2. Tier-1 Physical Pack Claims ({selectedBatch?.feistelBatchId ? 'V2 Compact Claims ~172 Chars' : 'V1 Signed Payload'})
                 </span>
                 <pre className="text-emerald-400 text-[11px] font-mono">
-                  {JSON.stringify(
-                    {
-                      batchId: selectedBatch?.id,
-                      serial: sampleSerial,
-                      expiryDate: selectedBatch?.expiryDate,
-                      manufacturerId: profile.id,
-                      nonce: 'a3f7b2c1',
-                      ts: '3460914344715500',
-                    },
-                    null,
-                    2
-                  )}
+                  {selectedBatch?.feistelBatchId
+                    ? JSON.stringify(
+                        {
+                          b: selectedBatch.feistelBatchId,
+                          i: parseInt(sampleSerial, 10) || 0,
+                          n: 'a3f7b2c14e',
+                        },
+                        null,
+                        2
+                      )
+                    : JSON.stringify(
+                        {
+                          batchId: selectedBatch?.id,
+                          serial: sampleSerial,
+                          expiryDate: selectedBatch?.expiryDate,
+                          manufacturerId: profile.id,
+                          nonce: 'a3f7b2c1',
+                          ts: '3460914344715500',
+                        },
+                        null,
+                        2
+                      )}
                 </pre>
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] text-[11px] text-[var(--text-muted)]">
               <ShieldCheck className="w-4 h-4 text-emerald-400 inline mr-1.5" />
-              Asymmetrically signed using NIST P-256 curve ECDSA. Fully verifiable offline by POS & mobile verification apps.
+              {selectedBatch?.feistelBatchId
+                ? 'V2 Zero-Storage Architecture: Ephemeral ECDSA keypair burned post-mint. 1-bit scanMap on Hyperledger Fabric.'
+                : 'Asymmetrically signed using NIST P-256 curve ECDSA. Fully verifiable offline by POS & mobile verification apps.'}
             </div>
           </div>
         </div>
@@ -402,3 +419,4 @@ export const QRCodeHubView: React.FC = () => {
     </div>
   );
 };
+

@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 
-// ── Schema ────────────────────────────────────────────────────────────────────
+// ── V2 ZERO-STORAGE ARCHITECTURE NOTICE ───────────────────────────────────────
+// DEPRECATED: This collection is no longer populated in PharmaChain V2.
+// Packs are validated cryptographically in O(1) via ephemeral ECDSA P-256 batch
+// signatures and Hyperledger Fabric World State bitmaps. Zero per-pack MongoDB rows.
 const PackSchema = new mongoose.Schema(
     {
         batchId:      { type: String, required: true, index: true },

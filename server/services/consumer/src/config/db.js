@@ -1,14 +1,15 @@
 import mongoose from 'mongoose';
 
-const DEFAULT_MONGO_URI =
-    'mongodb+srv://sahilsharma3043_db_user:ztH8xdKhwycWwD3o@cluster0.wv6khhi.mongodb.net/consumer';
-
 export const connectToDb = async () => {
     try {
-        const uri =
-            process.env.MONGO_URI ||
-            process.env.CONSUMER_MONGO_URI ||
-            DEFAULT_MONGO_URI;
+        const uri = process.env.MONGO_URI || process.env.CONSUMER_MONGO_URI;
+
+        if (!uri) {
+            throw new Error(
+                'MONGO_URI (or CONSUMER_MONGO_URI) is not set. ' +
+                'Configure it in the environment or Kubernetes secret before starting.'
+            );
+        }
 
         mongoose.connection.on('connected', () => {
             console.log('[consumer-service DB] Connected to MongoDB Atlas successfully');
@@ -31,3 +32,4 @@ export const connectToDb = async () => {
         throw error;
     }
 };
+

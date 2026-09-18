@@ -131,9 +131,16 @@ const BatchSchema = new mongoose.Schema(
         blockchainRecordedCount: { type: Number, default: 0 },
         blockchainSubmittedAt:   { type: Date, default: null },
 
-        // ── Cryptographic Signing Key Reference ────────────────────────────────
+        // ── Cryptographic Signing Key Reference (V1 & V2) ─────────────────────
         publicKeyPem: { type: String, default: null },
         keyId:        { type: String, default: null },
+
+        // ── V2 Zero-Storage Ephemeral Key Cryptographic Architecture ───────────
+        feistelBatchId:   { type: String, default: null, index: true },
+        batchPubKey:      { type: String, default: null }, // Ephemeral ECDSA P-256 public key (PEM / JWK)
+        privKeyBurnedAt:  { type: Date, default: null },   // Timestamp when RAM private key was zeroed out
+        totalPacks:       { type: Number, default: 0 },    // Bound for packIndex checking
+        qrVersion:        { type: String, default: 'V2_EPHEMERAL_ECDSA' },
     },
     { timestamps: true },
 );
@@ -142,6 +149,7 @@ const BatchSchema = new mongoose.Schema(
 BatchSchema.index({ manufacturerId: 1, createdAt: -1 });
 BatchSchema.index({ tags: 1 });
 BatchSchema.index({ drugSchedule: 1 });
+BatchSchema.index({ feistelBatchId: 1 });
 
 const Batch = mongoose.model('Batch', BatchSchema);
 export default Batch;

@@ -408,4 +408,427 @@ public final class PharmaContract implements ContractInterface {
 
         return genson.serialize(queryResults);
     }
+
+    // ── V2.1 Nibble Bitmap Constants ─────────────────────────────────────────────
+    // Each pack occupies 4 bits (1 nibble). 2 packs share one byte.
+    // Layout: byte[N/2] → bits[3:0] = pack(2k), bits[7:4] = pack(2k+1)
+    private static final int STATE_CREATED = 0x0; // 0000 — manufactured, not yet confirmed minted
+    private static final int STATE_MINTED  = 0x1; // 0001 — batch signed & initialized
+    private static final int STATE_AT_SHOP = 0x2; // 0010 — registered in verified pharmacy
+    private static final int STATE_SOLD    = 0x3; // 0011 — dispensed to legitimate patient
+    private static final int STATE_REVOKED = 0x4; // 0100 — recalled / flagged dangerous
+
+    private static final String[] STATE_NAMES = {
+        "CREATED", "MINTED", "AT_SHOP", "SOLD", "REVOKED"
+    };
+
+    /**
+     * Reads the 4-bit nibble for a given pack index from the nibble map buffer.
+     * Pack 2k → bits[3:0] of byte[k]; Pack 2k+1 → bits[7:4] of byte[k].
+     */
+    private static int getNibble(final byte[] buf, final int packIndex) {
+        int byteIndex = packIndex / 2;
+        if ((packIndex % 2) == 0) {
+            return buf[byteIndex] & 0x0F; // low nibble
+        } else {
+            return (buf[byteIndex] >> 4) & 0x0F; // high nibble
+        }
+    }
+
+    /**
+     * Writes a 4-bit nibble state for a given pack index into the nibble map buffer.
+     */
+    private static void setNibble(final byte[] buf, final int packIndex, final int state) {
+        int byteIndex = packIndex / 2;
+        if ((packIndex % 2) == 0) {
+            buf[byteIndex] = (byte) ((buf[byteIndex] & 0xF0) | (state & 0x0F)); // low nibble
+        } else {
+            buf[byteIndex] = (byte) ((buf[byteIndex] & 0x0F) | ((state & 0x0F) << 4)); // high nibble
+        }
+    }
+
+    private static String stateName(final int state) {
+        if (state >= 0 && state < STATE_NAMES.length) {
+            return STATE_NAMES[state];
+        }
+        return "UNKNOWN";
+    }
+
+    /**
+     * Initializes the Fabric World State nibble bitmap for a batch (V2.1 4-State Architecture).
+     * Allocates ceil(totalPacks / 2) bytes, writing STATE_MINTED (0x1) to every pack's nibble.
+     * Key: &lt;batchId&gt;:SCANMAP. Capacity key: &lt;batchId&gt;:TOTAL_PACKS.
+     *
+     * @param ctx          the transaction context
+     * @param batchId      the unique batch identifier (Feistel encoded, e.g. "B1-F8X2")
+     * @param totalPacksStr total number of packs in the batch
+     * @return status JSON with batchId, totalPacks, nibbleSizeBytes
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public String initBatchScanMap(final Context ctx, final String batchId, final String totalPacksStr) {
+        if (batchId == null || batchId.trim().isEmpty()) {
+            throw new ChaincodeException("Batch ID cannot be empty", "INVALID_ARGUMENT");
+        }
+        int totalPacks;
+        try {
+            totalPacks = Integer.parseInt(totalPacksStr.trim());
+        } catch (NumberFormatException e) {
+            throw new ChaincodeException("Invalid totalPacks: " + totalPacksStr, "INVALID_ARGUMENT");
+        }
+        if (totalPacks <= 0) {
+            throw new ChaincodeException("totalPacks must be greater than 0", "INVALID_ARGUMENT");
+        }
+
+        // 4 bits per pack → 2 packs per byte → ceil(N/2) bytes
+        int numBytes = (int) Math.ceil((double) totalPacks / 2.0);
+        byte[] nibbleMap = new byte[numBytes]; // Java zeroes all bytes (STATE_CREATED = 0x0)
+
+        String scanMapKey    = batchId + ":SCANMAP";
+        String totalPacksKey = batchId + ":TOTAL_PACKS";
+
+        ctx.getStub().putState(scanMapKey, nibbleMap);
+        ctx.getStub().putStringState(totalPacksKey, String.valueOf(totalPacks));
+
+        ctx.getStub().setEvent("BATCH_INITIALIZED",
+            (batchId + ":" + totalPacks).getBytes());
+
+        return String.format(
+            "{\"status\":\"success\",\"batchId\":\"%s\",\"totalPacks\":%d,\"nibbleSizeBytes\":%d,\"initialState\":\"CREATED\"}",
+            batchId, totalPacks, numBytes);
+    }
+
+    /**
+     * V2.1: Bulk transitions all packs in a batch from CREATED (0x0) to MINTED (0x1)
+     * when the manufacturer approves and ships the batch for distribution.
+     *
+     * @param ctx     the transaction context
+     * @param batchId the unique batch identifier
+     * @return execution status JSON
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public String mintBatch(final Context ctx, final String batchId) {
+        if (batchId == null || batchId.trim().isEmpty()) {
+            throw new ChaincodeException("Batch ID cannot be empty", "INVALID_ARGUMENT");
+        }
+        String scanMapKey = batchId + ":SCANMAP";
+        byte[] nibbleMap = ctx.getStub().getState(scanMapKey);
+        if (nibbleMap == null || nibbleMap.length == 0) {
+            throw new ChaincodeException("ScanMap not initialized for batch: " + batchId, "NOT_INITIALIZED");
+        }
+        String totalPacksStr = ctx.getStub().getStringState(batchId + ":TOTAL_PACKS");
+        int totalPacks = (totalPacksStr != null && !totalPacksStr.isEmpty())
+            ? Integer.parseInt(totalPacksStr)
+            : nibbleMap.length * 2;
+
+        for (int i = 0; i < totalPacks; i++) {
+            if (getNibble(nibbleMap, i) == STATE_CREATED) {
+                setNibble(nibbleMap, i, STATE_MINTED);
+            }
+        }
+        ctx.getStub().putState(scanMapKey, nibbleMap);
+        ctx.getStub().setEvent("BATCH_MINTED", (batchId + ":" + totalPacks).getBytes());
+        return String.format(
+            "{\"status\":\"success\",\"batchId\":\"%s\",\"totalPacks\":%d,\"state\":\"MINTED\"}",
+            batchId, totalPacks);
+    }
+
+    /**
+     * Read-only evaluation of a pack's supply-chain state (V2.1 Nibble).
+     * Does NOT mutate state. Used by consumer verification apps and regulatory audits.
+     * Returns rich state JSON including human-readable state name and forensic custody history.
+     *
+     * States returned: CREATED, MINTED, AT_SHOP, SOLD, REVOKED, NOT_INITIALIZED, OUT_OF_BOUNDS
+     *
+     * @param ctx          the transaction context
+     * @param batchId      the unique batch identifier
+     * @param packIndexStr the pack index (0 to totalPacks - 1)
+     * @return status JSON with custody history
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String getPackState(final Context ctx, final String batchId, final String packIndexStr) {
+        // 1. Batch-level recall check (O(1) key lookup, fastest possible path)
+        byte[] recallData = ctx.getStub().getState(batchId + ":RECALLED");
+        if (recallData == null || recallData.length == 0) {
+            recallData = ctx.getStub().getState(batchId + ":RECALL");
+        }
+        if (recallData != null && recallData.length > 0) {
+            return "{\"status\":\"REVOKED\",\"state\":" + STATE_REVOKED + ",\"batchId\":\"" + batchId + "\",\"reason\":\"BATCH_RECALLED\"}";
+        }
+
+        // 2. Read nibble map
+        byte[] nibbleMap = ctx.getStub().getState(batchId + ":SCANMAP");
+        if (nibbleMap == null || nibbleMap.length == 0) {
+            return "{\"status\":\"NOT_INITIALIZED\",\"batchId\":\"" + batchId + "\"}";
+        }
+
+        int packIndex;
+        try {
+            packIndex = Integer.parseInt(packIndexStr.trim());
+        } catch (NumberFormatException e) {
+            return "{\"status\":\"INVALID_INDEX\",\"error\":\"" + packIndexStr + "\"}";
+        }
+
+        if (packIndex < 0 || (packIndex / 2) >= nibbleMap.length) {
+            return "{\"status\":\"OUT_OF_BOUNDS\",\"packIndex\":" + packIndex + "}";
+        }
+
+        int state = getNibble(nibbleMap, packIndex);
+        String name = stateName(state);
+
+        JSONObject res = new JSONObject();
+        res.put("status", name);
+        res.put("state", state);
+        res.put("packIndex", packIndex);
+        res.put("batchId", batchId);
+
+        // Attach forensic custody records if available
+        String intakeKey = batchId + ":PACK:" + packIndex + ":INTAKE";
+        byte[] intakeBytes = ctx.getStub().getState(intakeKey);
+        if (intakeBytes != null && intakeBytes.length > 0) {
+            try {
+                res.put("intakeCustody", new JSONObject(new String(intakeBytes)));
+            } catch (Exception ignored) { }
+        }
+
+        String soldKey = batchId + ":PACK:" + packIndex + ":SOLD";
+        byte[] soldBytes = ctx.getStub().getState(soldKey);
+        if (soldBytes != null && soldBytes.length > 0) {
+            try {
+                res.put("saleCustody", new JSONObject(new String(soldBytes)));
+            } catch (Exception ignored) { }
+        }
+
+        return res.toString();
+    }
+
+    /**
+     * Backward-compatible alias: checkPackBit delegates to getPackState and maps to old binary semantics.
+     * Consumers who use the old "OK" / "DUPLICATE" / "RECALLED" response still work unchanged.
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String checkPackBit(final Context ctx, final String batchId, final String packIndexStr) {
+        String stateJson = getPackState(ctx, batchId, packIndexStr);
+        // Map nibble states to legacy 1-bit semantics for backward compatibility
+        if (stateJson.contains("\"status\":\"SOLD\"") || stateJson.contains("\"status\":\"AT_SHOP\"")) {
+            return stateJson.replace("\"status\":\"AT_SHOP\"", "\"status\":\"AT_SHOP\"")
+                            .replace("\"status\":\"SOLD\"", "\"status\":\"DUPLICATE\"");
+        }
+        if (stateJson.contains("\"status\":\"REVOKED\"")) {
+            return stateJson.replace("\"status\":\"REVOKED\"", "\"status\":\"RECALLED\"");
+        }
+        if (stateJson.contains("\"status\":\"MINTED\"") || stateJson.contains("\"status\":\"CREATED\"")) {
+            return stateJson.replace("\"status\":\"MINTED\"", "\"status\":\"OK\"")
+                            .replace("\"status\":\"CREATED\"", "\"status\":\"OK\"");
+        }
+        return stateJson;
+    }
+
+    /**
+     * Atomically advances a pack's nibble state on the supply-chain state machine (V2.1)
+     * and records immutable forensic custody details (shopId, sellerId, operatorId, timestamp, txId).
+     *
+     * Valid transitions:
+     *   MINTED  → AT_SHOP   (pharmacy intake scan — records shopId + intake timestamp)
+     *   AT_SHOP → SOLD      (point-of-sale dispense — records sellerId + sell timestamp)
+     *   ANY     → REVOKED   (regulatory recall override)
+     *
+     * @param ctx          the transaction context
+     * @param batchId      the unique batch identifier
+     * @param packIndexStr the pack index (0 to totalPacks - 1)
+     * @param newStateStr  target state: "AT_SHOP", "SOLD", or "REVOKED"
+     * @param actorId      shopId (on intake) or sellerId (on sale)
+     * @param operatorId   individual employee/operator ID
+     * @param location     GPS coordinates / pharmacy address
+     * @return execution status JSON with custody attribution
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public String setPackState(final Context ctx, final String batchId,
+                               final String packIndexStr, final String newStateStr,
+                               final String actorId, final String operatorId, final String location) {
+        int packIndex;
+        try {
+            packIndex = Integer.parseInt(packIndexStr.trim());
+        } catch (NumberFormatException e) {
+            throw new ChaincodeException("Invalid packIndex: " + packIndexStr, "INVALID_ARGUMENT");
+        }
+
+        // 1. Batch-level recall check
+        byte[] recallData = ctx.getStub().getState(batchId + ":RECALLED");
+        if (recallData == null || recallData.length == 0) {
+            recallData = ctx.getStub().getState(batchId + ":RECALL");
+        }
+        if (recallData != null && recallData.length > 0) {
+            return "{\"status\":\"REVOKED\",\"packIndex\":" + packIndex + ",\"reason\":\"BATCH_RECALLED\"}";
+        }
+
+        // 2. Resolve requested new state
+        int newState;
+        switch (newStateStr.trim().toUpperCase()) {
+            case "AT_SHOP":  newState = STATE_AT_SHOP; break;
+            case "SOLD":     newState = STATE_SOLD;    break;
+            case "REVOKED":  newState = STATE_REVOKED; break;
+            default:
+                throw new ChaincodeException("Invalid newState: " + newStateStr + ". Must be AT_SHOP, SOLD, or REVOKED.", "INVALID_ARGUMENT");
+        }
+
+        // 3. Read nibble map
+        String scanMapKey = batchId + ":SCANMAP";
+        byte[] nibbleMap = ctx.getStub().getState(scanMapKey);
+        if (nibbleMap == null || nibbleMap.length == 0) {
+            throw new ChaincodeException("ScanMap not initialized for batch: " + batchId, "NOT_INITIALIZED");
+        }
+
+        if (packIndex < 0 || (packIndex / 2) >= nibbleMap.length) {
+            throw new ChaincodeException("packIndex " + packIndex + " is out of bounds for batch " + batchId, "OUT_OF_BOUNDS");
+        }
+
+        // 4. Read current nibble state
+        int currentState = getNibble(nibbleMap, packIndex);
+
+        // 5. State machine enforcement & forensic recording
+        if (currentState == STATE_REVOKED) {
+            return "{\"status\":\"REVOKED\",\"packIndex\":" + packIndex + ",\"currentState\":" + currentState + "}";
+        }
+
+        String txId = ctx.getStub().getTxId();
+        String txTimestamp = "";
+        try {
+            java.time.Instant instant = ctx.getStub().getTxTimestamp();
+            if (instant != null) {
+                txTimestamp = instant.toString();
+            }
+        } catch (Exception e) {
+            txTimestamp = java.time.Instant.now().toString();
+        }
+
+        if (newState == STATE_REVOKED) {
+            // Regulatory override — allowed from any non-revoked state
+            setNibble(nibbleMap, packIndex, STATE_REVOKED);
+            ctx.getStub().putState(scanMapKey, nibbleMap);
+            ctx.getStub().setEvent("PACK_REVOKED", (batchId + ":" + packIndex).getBytes());
+            return "{\"status\":\"OK\",\"newState\":\"REVOKED\",\"packIndex\":" + packIndex + "}";
+        }
+
+        if (newState == STATE_AT_SHOP) {
+            if (currentState == STATE_AT_SHOP) {
+                // Idempotent duplicate intake scan — already registered
+                return "{\"status\":\"ALREADY_AT_SHOP\",\"packIndex\":" + packIndex + ",\"currentState\":" + currentState + "}";
+            }
+            if (currentState == STATE_CREATED) {
+                // Batch was created but not shipped yet
+                return "{\"status\":\"INVALID_STATE_TRANSITION\",\"currentState\":\"CREATED\",\"requestedState\":\"AT_SHOP\",\"packIndex\":" + packIndex + ",\"alert\":\"BATCH_NOT_SHIPPED\"}";
+            }
+            if (currentState != STATE_MINTED) {
+                // e.g. trying to re-intake a SOLD pack
+                ctx.getStub().setEvent("INVALID_TRANSITION", (batchId + ":" + packIndex).getBytes());
+                return "{\"status\":\"INVALID_STATE_TRANSITION\",\"currentState\":\"" + stateName(currentState) + "\",\"requestedState\":\"AT_SHOP\",\"packIndex\":" + packIndex + "}";
+            }
+
+            setNibble(nibbleMap, packIndex, STATE_AT_SHOP);
+            ctx.getStub().putState(scanMapKey, nibbleMap);
+
+            // Record immutable intake custody on Fabric ledger
+            String intakeKey = batchId + ":PACK:" + packIndex + ":INTAKE";
+            JSONObject intakeRecord = new JSONObject();
+            intakeRecord.put("batchId", batchId);
+            intakeRecord.put("packIndex", packIndex);
+            intakeRecord.put("intakeShopId", actorId != null ? actorId : "");
+            intakeRecord.put("intakeOperatorId", operatorId != null ? operatorId : "");
+            intakeRecord.put("location", location != null ? location : "");
+            intakeRecord.put("intakeTimestamp", txTimestamp);
+            intakeRecord.put("intakeTxId", txId);
+
+            ctx.getStub().putStringState(intakeKey, intakeRecord.toString());
+            ctx.getStub().setEvent("PACK_AT_SHOP", intakeRecord.toString().getBytes());
+
+            JSONObject res = new JSONObject();
+            res.put("status", "OK");
+            res.put("newState", "AT_SHOP");
+            res.put("packIndex", packIndex);
+            res.put("batchId", batchId);
+            JSONObject custody = new JSONObject();
+            custody.put("intakeShopId", actorId != null ? actorId : "");
+            custody.put("intakeOperatorId", operatorId != null ? operatorId : "");
+            custody.put("intakeTimestamp", txTimestamp);
+            custody.put("blockchainTxId", txId);
+            res.put("custody", custody);
+
+            return res.toString();
+        }
+
+        if (newState == STATE_SOLD) {
+            if (currentState == STATE_SOLD) {
+                // Duplicate POS scan — counterfeit / photocopy attack
+                ctx.getStub().setEvent("COUNTERFEIT_SCAN", (batchId + ":" + packIndex).getBytes());
+
+                // Read existing sale custody if present to expose who legitimately sold the original
+                String soldKey = batchId + ":PACK:" + packIndex + ":SOLD";
+                byte[] prevSaleBytes = ctx.getStub().getState(soldKey);
+
+                JSONObject res = new JSONObject();
+                res.put("status", "ALREADY_SOLD");
+                res.put("packIndex", packIndex);
+                res.put("currentState", currentState);
+                if (prevSaleBytes != null && prevSaleBytes.length > 0) {
+                    try {
+                        res.put("originalSaleCustody", new JSONObject(new String(prevSaleBytes)));
+                    } catch (Exception ignored) { }
+                }
+                return res.toString();
+            }
+            if (currentState != STATE_AT_SHOP) {
+                // Pack was never registered at a pharmacy — supply-chain diversion
+                ctx.getStub().setEvent("DIVERSION_DETECTED", (batchId + ":" + packIndex).getBytes());
+                return "{\"status\":\"INVALID_STATE_TRANSITION\",\"currentState\":\"" + stateName(currentState) + "\",\"requestedState\":\"SOLD\",\"packIndex\":" + packIndex + ",\"alert\":\"SUPPLY_CHAIN_DIVERSION\"}";
+            }
+
+            setNibble(nibbleMap, packIndex, STATE_SOLD);
+            ctx.getStub().putState(scanMapKey, nibbleMap);
+
+            // Record immutable sale custody on Fabric ledger
+            String soldKey = batchId + ":PACK:" + packIndex + ":SOLD";
+            JSONObject soldRecord = new JSONObject();
+            soldRecord.put("batchId", batchId);
+            soldRecord.put("packIndex", packIndex);
+            soldRecord.put("sellerId", actorId != null ? actorId : "");
+            soldRecord.put("soldByOperator", operatorId != null ? operatorId : "");
+            soldRecord.put("location", location != null ? location : "");
+            soldRecord.put("sellTimestamp", txTimestamp);
+            soldRecord.put("sellTxId", txId);
+
+            ctx.getStub().putStringState(soldKey, soldRecord.toString());
+            ctx.getStub().setEvent("PACK_DISPENSED", soldRecord.toString().getBytes());
+
+            JSONObject res = new JSONObject();
+            res.put("status", "OK");
+            res.put("newState", "SOLD");
+            res.put("packIndex", packIndex);
+            res.put("batchId", batchId);
+            JSONObject custody = new JSONObject();
+            custody.put("sellerId", actorId != null ? actorId : "");
+            custody.put("soldByOperator", operatorId != null ? operatorId : "");
+            custody.put("sellTimestamp", txTimestamp);
+            custody.put("blockchainTxId", txId);
+            res.put("custody", custody);
+
+            return res.toString();
+        }
+
+        throw new ChaincodeException("Unhandled state transition", "INTERNAL_ERROR");
+    }
+
+    /**
+     * Backward-compatible alias for POS sale scan (V2 compatibility).
+     * Delegates to setPackState with newState = "SOLD".
+     * Returns "OK", "DUPLICATE", or "RECALLED" to match old callers.
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public String scanPack(final Context ctx, final String batchId, final String packIndexStr) {
+        String result = setPackState(ctx, batchId, packIndexStr, "SOLD", "", "", "");
+        if (result.contains("\"status\":\"OK\"")) return "OK";
+        if (result.contains("\"status\":\"ALREADY_SOLD\"")) return "DUPLICATE";
+        if (result.contains("\"status\":\"REVOKED\"")) return "RECALLED";
+        if (result.contains("INVALID_STATE_TRANSITION")) return result; // pass through for V2.1 callers
+        return result;
+    }
 }

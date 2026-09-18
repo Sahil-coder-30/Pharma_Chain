@@ -42,3 +42,29 @@ export const getPackStatus = async (packHash, batchId) => {
     });
     return response.data;
 };
+
+/**
+ * V2.1 Nibble: Read-only supply-chain state query (evaluateTransaction only).
+ * Returns { status: 'MINTED'|'AT_SHOP'|'SOLD'|'REVOKED', state: 0–4, packIndex, batchId }
+ * @param {string} batchId
+ * @param {number} packIndex
+ */
+export const getPackState = async (batchId, packIndex) => {
+    try {
+        const response = await coreClient.get('/core/chain/pack-state', {
+            params: { batchId, packIndex },
+        });
+        return response.data;
+    } catch (err) {
+        console.warn(`[consumer-service CoreClient] getPackState error: ${err.message}`);
+        return { status: 'UNKNOWN', error: err.message };
+    }
+};
+
+/** @deprecated Use getPackState — maps old binary OK/DUPLICATE/RECALLED to V2.1 nibble endpoint */
+export const checkPackBit = async (batchId, packIndex) => {
+    const response = await coreClient.get('/core/hash/bit', {
+        params: { batchId, packIndex },
+    });
+    return response.data;
+};

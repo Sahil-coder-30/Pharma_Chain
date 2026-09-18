@@ -9,9 +9,6 @@ import {
     getManufacturerPublicKeyController,
     getAllPublicKeysController,
 } from '../controllers/auth.controller.js';
-import { initIST } from '../utils/time.js';
-
-initIST();
 
 const app = express();
 

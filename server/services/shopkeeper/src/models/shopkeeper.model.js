@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-export const VERIFICATION_STATUS = ['pending', 'verified', 'approved', 'rejected', 'suspended', 'PENDING', 'VERIFIED', 'APPROVED', 'REJECTED', 'SUSPENDED'];
+// Lowercase-only enum — the application always writes lowercase values.
+export const VERIFICATION_STATUS = ['pending', 'verified', 'approved', 'rejected', 'suspended'];
 
 
 // ── Schema ────────────────────────────────────────────────────────────────────

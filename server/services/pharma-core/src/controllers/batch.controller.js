@@ -1,5 +1,5 @@
-import { mintAndUploadBatch } from '../services/crypto.service.js';
-import { submitTransitionBatchChunked } from '../services/backendClient.service.js';
+import { mintAndUploadBatch, mintV2BatchAndUpload } from '../services/crypto.service.js';
+import { submitTransitionBatchChunked, initBatchScanMap } from '../services/backendClient.service.js';
 import { getISTDateString, getISTTimeString, getISTISOString } from '../utils/time.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -9,51 +9,11 @@ const MIN_QUANTITY = 1;
 /**
  * POST /core/batch/mint
  *
- * S3 Pipeline Mint Controller.
- *
- * Signs N pharmaceutical pack JWTs (ES256), builds a CSV, uploads it to AWS S3
- * (or local fallback in dev mode), commits MINTED transitions to Hyperledger Fabric,
- * and returns a lightweight JSON response containing only the S3 download URL.
- *
- * KEY CHANGE from old architecture:
- *   ❌ OLD: returned { packs: [ 100k objects ] } — 50MB HTTP payload to manufacturer-service
- *   ✅ NEW: returns { s3DownloadUrl, s3FileKey, totalPacks } — ~200 byte payload
- *
- * Performance characteristics (100k packs):
- *   - Private key decrypted ONCE (1 scrypt, ~150ms)
- *   - All JWTs signed in memory (~10s for 100k at ~0.1ms/pack)
- *   - CSV built in one pass (~500ms for 100k rows)
- *   - S3 multipart upload (~5-15s depending on network)
- *   - Total: ~20-30s  (vs ~4.1 hours naive per-pack approach)
- *
- * Request body:
- *   {
- *     batchId:        string,   // PharmaChain system batch ID (e.g. "PC-BATCH-CIPLA0-...")
- *     manufacturerId: string,   // Must have a stored EC key in keystore
- *     expiryDate:     string,   // ISO date (e.g. "2028-01-14")
- *     quantity:       number,   // 1 – 100,000
- *     medicineName:   string    // Used in CSV metadata (e.g. "Amoxicillin 625mg")
- *   }
- *
- * Response (success):
- *   {
- *     status:                  "success",
- *     batchId:                 string,
- *     totalPacks:              number,
- *     s3FileKey:               string,    // S3 object key, e.g. "batches/PC-BATCH-....csv"
- *     s3DownloadUrl:           string,    // Pre-signed URL (AWS) or http://localhost:4000/core/export/... (dev)
- *     s3UrlExpiresAt:          string,    // ISO timestamp when URL expires (null for local mode)
- *     s3Mode:                  "aws"|"local",
- *     backendSubmitted:        boolean,
- *     partialBlockchainSubmit: boolean,
- *     blockchainRecorded:      number,
- *     mintedAt:                string,
- *     timingMs:                { signing, upload, total }
- *   }
+ * Supports both V1 (legacy) and V2 Zero-Storage Ephemeral Key Minting.
  */
 export const mintBatchController = async (req, res) => {
     try {
-        const { batchId, manufacturerId, expiryDate, quantity, medicineName } = req.body;
+        const { batchId, manufacturerId, expiryDate, quantity, medicineName, version } = req.body;
 
         // ── Input validation ─────────────────────────────────────────────────
         if (!batchId || !manufacturerId || !expiryDate || quantity == null) {
@@ -79,22 +39,35 @@ export const mintBatchController = async (req, res) => {
             });
         }
 
+        const isV2 = version === 'v2' || version === 'V2' || req.body.useV2 === true || req.body.isV2 === true;
+
         console.log(
-            `[pharma-core Batch] mintBatch (S3 pipeline) start — batchId: ${batchId}, ` +
+            `[pharma-core Batch] mintBatch ${isV2 ? '(V2 Ephemeral)' : '(V1 Standard)'} start — batchId: ${batchId}, ` +
             `manufacturerId: ${manufacturerId}, quantity: ${qty}, ` +
             `medicineName: "${medicineName || 'N/A'}"`,
         );
 
-        // ── Orchestrated mint + upload ────────────────────────────────────────
-        // mintAndUploadBatch handles: 1 scrypt decrypt → N EC signs → CSV build → S3 upload → Fabric submit
-        // submitTransitionBatchChunked is injected so it can be mocked in tests
+        if (isV2) {
+            // ── V2 Ephemeral Keypair Minting Pipeline ─────────────────────────
+            const result = await mintV2BatchAndUpload({
+                batchId,
+                manufacturerId,
+                totalPacks: qty,
+                medicineName: medicineName || '',
+                expiryDate: expiryDate || '',
+                initScanMapFn: initBatchScanMap,
+            });
+            return res.status(200).json(result);
+        }
+
+        // ── V1 Standard S3 Minting Pipeline ───────────────────────────────────
         const result = await mintAndUploadBatch(
             batchId,
             manufacturerId,
             expiryDate,
             qty,
             medicineName || '',
-            submitTransitionBatchChunked, // injected blockchain submit function
+            submitTransitionBatchChunked,
         );
 
         return res.status(200).json(result);

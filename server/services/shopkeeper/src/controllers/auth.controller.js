@@ -30,6 +30,30 @@ const signRefreshToken = (shopkeeper) =>
         { algorithm: 'HS256', expiresIn: REFRESH_EXPIRES },
     );
 
+/**
+ * Validates X-Admin-Token header against ADMIN_TOKEN env var.
+ * Returns true (and sends the error response) if the token is invalid.
+ * Controllers should return immediately if this returns true.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {boolean} true if rejected, false if authorized
+ */
+const rejectIfNotAdmin = (req, res) => {
+    const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+    if (!ADMIN_TOKEN) {
+        console.error('[shopkeeper-service Auth] ADMIN_TOKEN env var not set — KYC endpoint disabled');
+        res.status(500).json({ status: 'error', message: 'Admin token not configured on server' });
+        return true;
+    }
+    const presented = req.headers['x-admin-token'];
+    if (!presented || presented !== ADMIN_TOKEN) {
+        res.status(401).json({ status: 'error', code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Token' });
+        return true;
+    }
+    return false;
+};
+
+
 // ── Controllers ───────────────────────────────────────────────────────────────
 
 // POST /api/shopkeeper/register
@@ -190,11 +214,9 @@ export const loginController = async (req, res) => {
 
         return res.status(200).json({
             status:       'success',
-            success:      true,
             accessToken,
             refreshToken,
             data:         profile,
-            shopkeeper:   profile,
         });
     } catch (err) {
         console.error('[shopkeeper-service Auth] loginController:', err.message);
@@ -368,24 +390,14 @@ export const resetPasswordController = async (req, res) => {
 // ── KYC Approve — POST /api/shopkeeper/auth/kyc/approve ──────────────────────
 //
 // Admin-only. Guarded by X-Admin-Token header.
-// Sets verificationStatus = 'APPROVED' (shopkeeper field) and kycStatus = 'APPROVED'.
-// Shopkeepers do NOT get a signing key — only manufacturers need EC P-256 keys.
+// Sets verificationStatus = 'approved'. Shopkeepers do NOT get a signing key —
+// only manufacturers need EC P-256 keys.
 //
 // Body: { shopkeeperId } OR { email }
 // Header: X-Admin-Token: <value of ADMIN_TOKEN env var>
 //
 export const kycApproveController = async (req, res) => {
-    // Fail closed — disabled if ADMIN_TOKEN not configured
-    const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-    if (!ADMIN_TOKEN) {
-        console.error('[shopkeeper-service Auth] ADMIN_TOKEN env var not set — KYC endpoint disabled');
-        return res.status(500).json({ status: 'error', message: 'Admin token not configured on server' });
-    }
-
-    const presented = req.headers['x-admin-token'];
-    if (!presented || presented !== ADMIN_TOKEN) {
-        return res.status(401).json({ status: 'error', code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Token' });
-    }
+    if (rejectIfNotAdmin(req, res)) return;
 
     try {
         const { shopkeeperId, email } = req.body;
@@ -403,9 +415,7 @@ export const kycApproveController = async (req, res) => {
             return res.status(404).json({ status: 'error', message: 'Shopkeeper not found' });
         }
 
-        // Update both verificationStatus (shopkeeper-specific) and kycStatus (shared field)
         shopkeeper.verificationStatus = 'approved';
-        if (shopkeeper.kycStatus !== undefined) shopkeeper.kycStatus = 'approved';
         shopkeeper.verifiedAt = new Date();
         shopkeeper.rejectionReason = null;
         await shopkeeper.save();
@@ -439,15 +449,7 @@ export const kycApproveController = async (req, res) => {
 
 // ── KYC Reject — POST /api/shopkeeper/auth/kyc/reject ─────────────────────────
 export const kycRejectController = async (req, res) => {
-    const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-    if (!ADMIN_TOKEN) {
-        return res.status(500).json({ status: 'error', message: 'Admin token not configured on server' });
-    }
-
-    const presented = req.headers['x-admin-token'];
-    if (!presented || presented !== ADMIN_TOKEN) {
-        return res.status(401).json({ status: 'error', code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Token' });
-    }
+    if (rejectIfNotAdmin(req, res)) return;
 
     try {
         const { shopkeeperId, email, reason } = req.body;
@@ -497,15 +499,7 @@ export const kycRejectController = async (req, res) => {
 
 // ── Suspend License — POST /api/shopkeeper/auth/kyc/suspend ───────────────────
 export const kycSuspendController = async (req, res) => {
-    const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-    if (!ADMIN_TOKEN) {
-        return res.status(500).json({ status: 'error', message: 'Admin token not configured on server' });
-    }
-
-    const presented = req.headers['x-admin-token'];
-    if (!presented || presented !== ADMIN_TOKEN) {
-        return res.status(401).json({ status: 'error', code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Token' });
-    }
+    if (rejectIfNotAdmin(req, res)) return;
 
     try {
         const { shopkeeperId, email, reason } = req.body;
@@ -555,15 +549,7 @@ export const kycSuspendController = async (req, res) => {
 
 // ── Internal List — GET /api/shopkeeper/internal/list ─────────────────────────
 export const internalListController = async (req, res) => {
-    const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-    if (!ADMIN_TOKEN) {
-        return res.status(500).json({ status: 'error', message: 'Admin token not configured on server' });
-    }
-
-    const presented = req.headers['x-admin-token'];
-    if (!presented || presented !== ADMIN_TOKEN) {
-        return res.status(401).json({ status: 'error', code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Token' });
-    }
+    if (rejectIfNotAdmin(req, res)) return;
 
     try {
         const { status, licenseType, city, search, page = 1, limit = 10 } = req.query;
@@ -651,15 +637,7 @@ export const internalListController = async (req, res) => {
 
 // ── Internal Detail — GET /api/shopkeeper/internal/:id ────────────────────────
 export const internalDetailController = async (req, res) => {
-    const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-    if (!ADMIN_TOKEN) {
-        return res.status(500).json({ status: 'error', message: 'Admin token not configured on server' });
-    }
-
-    const presented = req.headers['x-admin-token'];
-    if (!presented || presented !== ADMIN_TOKEN) {
-        return res.status(401).json({ status: 'error', code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Token' });
-    }
+    if (rejectIfNotAdmin(req, res)) return;
 
     try {
         const { id } = req.params;
@@ -706,34 +684,20 @@ export const internalDetailController = async (req, res) => {
 
 // ── Internal Stats — GET /api/shopkeeper/internal/stats ───────────────────────
 export const internalStatsController = async (req, res) => {
-    const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-    if (!ADMIN_TOKEN) {
-        return res.status(500).json({ status: 'error', message: 'Admin token not configured on server' });
-    }
-
-    const presented = req.headers['x-admin-token'];
-    if (!presented || presented !== ADMIN_TOKEN) {
-        return res.status(401).json({ status: 'error', code: 'UNAUTHORIZED', message: 'Invalid or missing X-Admin-Token' });
-    }
+    if (rejectIfNotAdmin(req, res)) return;
 
     try {
         const [total, pending, approved, rejected, suspended] = await Promise.all([
             Shopkeeper.countDocuments({}),
-            Shopkeeper.countDocuments({ verificationStatus: { $in: ['pending', 'PENDING'] } }),
-            Shopkeeper.countDocuments({ verificationStatus: { $in: ['approved', 'APPROVED', 'verified', 'VERIFIED'] } }),
-            Shopkeeper.countDocuments({ verificationStatus: { $in: ['rejected', 'REJECTED'] } }),
-            Shopkeeper.countDocuments({ verificationStatus: { $in: ['suspended', 'SUSPENDED'] } }),
+            Shopkeeper.countDocuments({ verificationStatus: 'pending' }),
+            Shopkeeper.countDocuments({ verificationStatus: { $in: ['approved', 'verified'] } }),
+            Shopkeeper.countDocuments({ verificationStatus: 'rejected' }),
+            Shopkeeper.countDocuments({ verificationStatus: 'suspended' }),
         ]);
 
         return res.status(200).json({
             status: 'success',
-            data: {
-                total,
-                pending,
-                approved,
-                rejected,
-                suspended,
-            },
+            data: { total, pending, approved, rejected, suspended },
         });
     } catch (err) {
         console.error('[shopkeeper-service Auth] internalStatsController:', err.message);

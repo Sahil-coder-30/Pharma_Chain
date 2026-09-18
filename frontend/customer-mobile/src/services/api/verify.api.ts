@@ -77,7 +77,7 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
     const payload = data.payload || {};
     const med = data.medicine || {};
     const batch = data.batch || {};
-    const hasValidPayload = Boolean(payload && Object.keys(payload).length > 0 && (payload.batchId || payload.medicineName || med.medicineName));
+    const hasValidPayload = Boolean(payload && Object.keys(payload).length > 0 && (payload.batchId || payload.b || payload.medicineName || med.medicineName));
 
     const medicineName =
       med.medicineName ||
@@ -96,9 +96,9 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
     const storageCondition = med.storageCondition || batch.storageConditions || null;
     const productionSite = med.productionSite || batch.productionSite || null;
 
-    const batchId = med.batchId || batch.batchId || payload.batchId || (hasValidPayload ? 'BATCH-LIVE-001' : 'N/A');
+    const batchId = med.batchId || batch.batchId || payload.batchId || payload.b || (hasValidPayload ? 'BATCH-LIVE-001' : 'N/A');
     const expiryDate = med.expiryDate || batch.expiryDate || payload.expiryDate || 'N/A';
-    const manufacturingDate = med.manufacturingDate || batch.manufacturingDate || payload.mfgDate || payload.manufacturingDate || (hasValidPayload ? '2026-08-01' : 'N/A');
+    const manufacturingDate = med.manufacturingDate || batch.manufacturingDate || payload.mfgDate || payload.manufacturingDate || (hasValidPayload ? (batch.manufacturingDate || '2026-08-01') : 'N/A');
 
     const isSold = Boolean(data.isSold ?? (uiState === 'PURCHASED_RECENTLY' || uiState === 'ALREADY_SOLD'));
     const isAtShop = Boolean(uiState === 'AT_SHOP' || data.custodyState === 'AT_SHOP' || (!isSold && (data.dispensingShop?.name || data.detail?.shopName)));
@@ -127,7 +127,7 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
       detail: data.detail,
       payload,
       pack: {
-        packId: data.packHash || payload.serial || (isValid ? 'PACK-SERIAL' : 'N/A'),
+        packId: data.packHash || payload.serial || (payload.i !== undefined ? `idx-${payload.i}` : (isValid ? 'PACK-SERIAL' : 'N/A')),
         medicineName,
         genericName,
         brandName,
@@ -138,8 +138,9 @@ export const verifyMedicineQR = async (qrData: string): Promise<VerificationResu
         composition,
         drugSchedule,
         storageCondition,
-        serial: payload.serial,
+        serial: payload.serial || (payload.i !== undefined ? `idx-${payload.i}` : undefined),
       },
+
       manufacturer: {
         name: med.manufacturerName || batch.manufacturerName || payload.manufacturerId || (hasValidPayload ? 'Verified CDSCO Manufacturer' : 'Unknown / Unregistered'),
         id: payload.manufacturerId || null,

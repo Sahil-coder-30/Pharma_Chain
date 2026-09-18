@@ -806,11 +806,12 @@ export const getManufacturerPublicKeyController = async (req, res) => {
         try {
             const Batch = mongoose.model('Batch');
             const batch = await Batch.findOne({
-                $or: [{ batchId: id }, { systemBatchId: id }, { manufacturerBatchNumber: id }],
-            }).select('manufacturerId publicKeyPem keyId').lean();
+                $or: [{ batchId: id }, { systemBatchId: id }, { manufacturerBatchNumber: id }, { feistelBatchId: id }],
+            }).select('manufacturerId publicKeyPem batchPubKey keyId').lean();
 
             if (batch) {
-                if (batch.publicKeyPem) batchKey = batch.publicKeyPem;
+                if (batch.batchPubKey) batchKey = batch.batchPubKey;
+                else if (batch.publicKeyPem) batchKey = batch.publicKeyPem;
                 if (!manufacturer && batch.manufacturerId) {
                     manufacturer = await Manufacturer.findOne({ manufacturerId: batch.manufacturerId })
                         .select('manufacturerId keyId publicKeyPem publicKeys companyName kycStatus')

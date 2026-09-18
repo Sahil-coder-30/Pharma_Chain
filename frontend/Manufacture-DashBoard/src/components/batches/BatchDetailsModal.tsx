@@ -28,9 +28,11 @@ import {
   FileText,
   ThermometerSnowflake,
   ShieldCheck,
+  Flame,
 } from 'lucide-react';
 
 export const BatchDetailsModal: React.FC = () => {
+
   const {
     selectedBatch,
     setSelectedBatch,
@@ -481,40 +483,100 @@ export const BatchDetailsModal: React.FC = () => {
         {/* Tab 5: Tier 1 Security & ES256 Token */}
         {activeTab === 'security' && (
           <div className="space-y-4 text-xs">
+            {/* V2 Perfect Forward Secrecy Banner */}
+            {(selectedBatch.privKeyBurnedAt || selectedBatch.feistelBatchId) && (
+              <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-emerald-500/15 to-transparent border border-emerald-500/30 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                    <Flame className="w-4 h-4 text-amber-400 animate-pulse" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-emerald-400 block text-[11px]">
+                      🔥 Perfect Mint Secrecy (PFS) Active
+                    </span>
+                    <span className="text-[10px] text-[var(--text-muted)] block">
+                      Ephemeral ECDSA keypair was generated in RAM and wiped after minting.
+                    </span>
+                  </div>
+                </div>
+                {selectedBatch.privKeyBurnedAt && (
+                  <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/60 px-2 py-1 rounded-md border border-emerald-800 shrink-0">
+                    RAM Scrubbed: {new Date(selectedBatch.privKeyBurnedAt).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
               <div className="sm:col-span-4 flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-emerald-800 shadow-sm">
                 <QRCodeSVG
-                  value={livePacks[0]?.verifyUrl || `https://pharmachain.gov.in/verify/${selectedBatch.id}-00001?batch=${selectedBatch.id}`}
+                  value={livePacks[0]?.verifyUrl || `https://pharmachain.gov.in/v?t=${livePacks[0]?.signedToken || 'token-preview'}`}
                   size={130}
                   level="M"
                   includeMargin={true}
                 />
-                <span className="text-[10px] text-slate-800 font-mono font-bold mt-1">Serial #00001</span>
+                <span className="text-[10px] text-slate-800 font-mono font-bold mt-1">
+                  {selectedBatch.feistelBatchId ? `${selectedBatch.feistelBatchId} #0` : 'Serial #00001'}
+                </span>
+                <span className="text-[9px] text-emerald-700 font-mono font-semibold">
+                  {selectedBatch.feistelBatchId ? 'QR Version 4 (~172 chars)' : 'QR Version 8 (~450 chars)'}
+                </span>
               </div>
               <div className="sm:col-span-8 p-3.5 rounded-xl bg-slate-950 text-slate-200 font-mono text-[10px] space-y-1.5 border border-slate-800">
                 <div className="text-emerald-400 font-bold flex items-center justify-between pb-1 border-b border-slate-800">
-                  <span>TIER 1: ES256 SIGNED QR JWT</span>
+                  <span>{selectedBatch.feistelBatchId ? 'TIER 1: V2 COMPACT ECDSA JWT' : 'TIER 1: ES256 SIGNED QR JWT'}</span>
                   <span>alg: "ES256"</span>
                 </div>
-                <div className="space-y-0.5 text-slate-300">
-                  <div>batchId: "{selectedBatch.id}"</div>
-                  <div>serial: "00001"</div>
-                  <div>expiryDate: "{selectedBatch.expiryDate}"</div>
-                  <div>manufacturerId: "{selectedBatch.manufacturerId}"</div>
-                  <div>medicineName: "{selectedBatch.medicineName}"</div>
-                  <div>nonce: "a3f7b2c1" <span className="text-slate-500">// CSPRNG</span></div>
-                </div>
+                {selectedBatch.feistelBatchId ? (
+                  <div className="space-y-0.5 text-slate-300">
+                    <div>b: "{selectedBatch.feistelBatchId}" <span className="text-slate-500">// Feistel Bijective Batch ID</span></div>
+                    <div>i: 0 <span className="text-slate-500">// Pack Index (0 to {selectedBatch.totalQuantity - 1})</span></div>
+                    <div>n: "a3f7b2c14e" <span className="text-slate-500">// 40-bit CSPRNG Nonce</span></div>
+                    <div className="pt-1 text-slate-500 border-t border-slate-800/80">
+                      URL: <span className="text-emerald-300">https://pharmachain.gov.in/v?t=...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-0.5 text-slate-300">
+                    <div>batchId: "{selectedBatch.id}"</div>
+                    <div>serial: "00001"</div>
+                    <div>expiryDate: "{selectedBatch.expiryDate}"</div>
+                    <div>manufacturerId: "{selectedBatch.manufacturerId}"</div>
+                    <div>medicineName: "{selectedBatch.medicineName}"</div>
+                    <div>nonce: "a3f7b2c1" <span className="text-slate-500">// CSPRNG</span></div>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="text-[11px] text-[var(--text-muted)]">
-                Signing Key ID: <code className="font-mono text-emerald-400">{profile.keyId}</code> (ECDSA NIST P-256 Curve)
-              </span>
+            {selectedBatch.batchPubKey && (
+              <div className="p-3 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] space-y-1 font-mono text-[10px]">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Certified Batch Public Key (Immutable on Fabric & DB):</span>
+                </div>
+                <div className="text-[var(--text-muted)] break-all max-h-16 overflow-y-auto bg-black/20 p-2 rounded">
+                  {selectedBatch.batchPubKey}
+                </div>
+              </div>
+            )}
+
+            <div className="p-3 rounded-xl bg-[var(--bg-element)] border border-[var(--border)] flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Signing Architecture: <code className="font-mono text-emerald-400">{selectedBatch.feistelBatchId ? 'Per-Batch Ephemeral ECDSA (P-256)' : `${profile.keyId} (ECDSA NIST P-256)`}</code>
+                </span>
+              </div>
+              {selectedBatch.feistelBatchId && (
+                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800">
+                  Fabric Bitmap: 1-Bit State
+                </span>
+              )}
             </div>
           </div>
         )}
+
       </div>
     </Modal>
   );

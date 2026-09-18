@@ -251,3 +251,106 @@ export const submitTransitionBatchChunked = async (batchId, transitions, chunkSi
 
     return allRecorded;
 };
+
+// ── V2.1 NIBBLE STATE OPERATIONS ───────────────────────────────────────────────
+
+/**
+ * Initializes the Fabric World State nibble bitmap for a batch (V2.1).
+ * All packs start as STATE_MINTED (0x1).
+ * @param {string} batchId - e.g. "B1-F8X2" or systemBatchId
+ * @param {number} totalPacks - Number of packs in batch
+ * @returns {Promise<Object>}
+ */
+export const initBatchScanMap = async (batchId, totalPacks) => {
+    try {
+        const response = await createBackendClient().post('/api/transition/init-scanmap', {
+            batchId,
+            totalPacks,
+        });
+        console.log(`[pharma-core BackendClient] 🗺️ V2.1 Nibble ScanMap initialized for batch: ${batchId} (${totalPacks} packs, initial state: MINTED)`);
+        return response.data;
+    } catch (err) {
+        throw formatBlockchainError(err, 'initBatchScanMap', `Batch: ${batchId}, Packs: ${totalPacks}`);
+    }
+};
+
+/**
+ * V2.1: Atomically advances a pack's nibble state on the supply-chain state machine.
+ * Valid transitions:
+ *   MINTED → AT_SHOP  (pharmacy intake)
+ *   AT_SHOP → SOLD    (POS dispense)
+ *   ANY → REVOKED     (regulatory override)
+ *
+ * @param {string} batchId
+ * @param {number} packIndex
+ * @param {'AT_SHOP'|'SOLD'|'REVOKED'} newState
+ * @param {Object} [custodyData] - { shopId, sellerId, operatorId, location, timestamp }
+ * @returns {Promise<{ status: string, newState?: string, packIndex: number, alert?: string, custody?: any }>}
+ */
+export const setPackStateOnChain = async (batchId, packIndex, newState, custodyData = {}) => {
+    try {
+        const response = await createBackendClient().post('/api/transition/set-pack-state', {
+            batchId,
+            packIndex,
+            newState,
+            shopId:     custodyData.shopId,
+            sellerId:   custodyData.sellerId,
+            operatorId: custodyData.operatorId,
+            location:   custodyData.location,
+            timestamp:  custodyData.timestamp,
+        });
+        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+        console.log(`[pharma-core BackendClient] ⚡ V2.1 setPackState: batch=${batchId}, index=${packIndex}, newState=${newState} → ${data?.status}`);
+        return data;
+    } catch (err) {
+        throw formatBlockchainError(err, 'setPackStateOnChain', `Batch: ${batchId}, Index: ${packIndex}, State: ${newState}`);
+    }
+};
+
+/**
+ * V2.1: Bulk transitions all packs in a batch from CREATED (0x0) to MINTED (0x1) on Fabric.
+ * Triggered when the manufacturer approves and ships the batch for distribution.
+ *
+ * @param {string} batchId
+ * @returns {Promise<{ status: string, batchId: string, totalPacks: number, state: string }>}
+ */
+export const mintBatchOnChain = async (batchId) => {
+    try {
+        const response = await createBackendClient().post('/api/transition/mint-batch', { batchId });
+        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+        console.log(`[pharma-core BackendClient] ⚡ V2.1 mintBatch: batch=${batchId} → ${data?.status}`);
+        return data;
+    } catch (err) {
+        throw formatBlockchainError(err, 'mintBatchOnChain', `Batch: ${batchId}`);
+    }
+};
+
+/**
+ * V2.1: Read-only nibble state query. Does NOT mutate ledger.
+ * Used by consumer verification (read-only evaluateTransaction).
+ * Returns: { status: 'MINTED'|'AT_SHOP'|'SOLD'|'REVOKED'|'NOT_INITIALIZED', state: 0–4, packIndex, batchId }
+ *
+ * @param {string} batchId
+ * @param {number} packIndex
+ * @returns {Promise<{ status: string, state: number, packIndex: number, batchId: string }>}
+ */
+export const getPackStateOnChain = async (batchId, packIndex) => {
+    try {
+        const response = await createBackendClient().get('/api/transition/pack-state', {
+            params: { batchId, packIndex },
+        });
+        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+        return data;
+    } catch (err) {
+        console.warn(`[pharma-core BackendClient] ⚠️ getPackState error: ${err.message}`);
+        return { status: 'UNKNOWN', error: err.message };
+    }
+};
+
+// ── Backward-compat aliases (V2 → V2.1) ───────────────────────────────────────
+/** @deprecated Use setPackStateOnChain(batchId, packIndex, 'SOLD') */
+export const scanPackOnChain = (batchId, packIndex) => setPackStateOnChain(batchId, packIndex, 'SOLD');
+
+/** @deprecated Use getPackStateOnChain(batchId, packIndex) */
+export const checkPackBitOnChain = (batchId, packIndex) => getPackStateOnChain(batchId, packIndex);
+

@@ -2,9 +2,10 @@ import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import ConsumerUser from '../models/user.model.js';
 
-const JWT_SECRET =
-    process.env.JWT_SECRET ||
-    'fbf90411fe9cebf9079d22ef36fc1321f0ce244ed073152e86dc962715389b703463f6f163953269c641c9cd69ba3fd7c4b3f3a97a5305811c3d3c38608554cd';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('[consumer-service Auth] JWT_SECRET env var is not set. Service cannot start.');
+}
 
 // ── Controllers ───────────────────────────────────────────────────────────────
 

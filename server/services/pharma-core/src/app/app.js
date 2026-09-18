@@ -12,9 +12,7 @@ import { getCorePrivateKey, getCorePublicKey } from '../config/keys.js';
 import { localExportDownloadController, exportPreviewController } from '../controllers/export.controller.js';
 import requireAuth from '../middleware/requireAuth.middleware.js';
 
-import { getISTISOString, initIST } from '../utils/time.js';
-
-initIST();
+import { getISTISOString } from '../utils/time.js';
 
 const app = express();
 

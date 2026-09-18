@@ -64,3 +64,26 @@ export const getHashStatusController = async (req, res) => {
         return res.status(500).json({ status: 'error', message: error.message });
     }
 };
+
+/**
+ * GET /core/hash/bit?batchId=...&packIndex=...
+ * Read-only check of pack bit in Fabric World State bitmap without flipping state.
+ */
+export const checkPackBitController = async (req, res) => {
+    try {
+        const { batchId, packIndex } = req.query;
+        if (!batchId || packIndex == null) {
+            return res.status(400).json({ status: 'error', message: 'batchId and packIndex are required' });
+        }
+        const { checkPackBitOnChain } = await import('../services/backendClient.service.js');
+        const result = await checkPackBitOnChain(batchId, parseInt(packIndex, 10));
+        return res.status(200).json({
+            status: 'success',
+            ...result,
+        });
+    } catch (error) {
+        console.error('[pharma-core Hash] checkPackBitController error:', error.message);
+        return res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+

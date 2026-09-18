@@ -3,6 +3,7 @@ import Manufacturer from '../models/manufacturer.model.js';
 import axios from 'axios';
 import {
     mintBatchViaPharmaCore,
+    mintBatchOnChainViaPharmaCore,
     recallBatchViaPharmaCore,
     fetchBatchPreviewViaPharmaCore,
     fetchBatchCsvStreamViaPharmaCore,
@@ -12,6 +13,7 @@ import {
 } from '../services/coreClient.service.js';
 import crypto from 'crypto';
 import { getISTDateString, getISTISOString } from '../utils/time.js';
+import { generateFeistelBatchId } from '../utils/feistel.util.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MAX_QUANTITY = 100_000; // 1 lakh packs
@@ -84,6 +86,7 @@ const runMintJob = async (batchId, manufacturerId, expiryDate, totalQuantity, me
             expiryDate,
             quantity:    totalQuantity,
             medicineName,
+            version:     'v2',
         });
 
         job.status   = 'UPLOADING';
@@ -113,8 +116,12 @@ const runMintJob = async (batchId, manufacturerId, expiryDate, totalQuantity, me
             blockchainError:         bError,
             blockchainRecordedCount: mintResult.blockchainRecorded || 0,
             blockchainSubmittedAt:   mintResult.backendSubmitted ? new Date() : null,
-            publicKeyPem:            mintResult.publicKeyPem || null,
+            publicKeyPem:            mintResult.publicKeyPem || mintResult.batchPubKey || null,
             keyId:                   mintResult.keyId || null,
+            batchPubKey:             mintResult.batchPubKey || mintResult.publicKeyPem || null,
+            privKeyBurnedAt:         mintResult.privKeyBurnedAt ? new Date(mintResult.privKeyBurnedAt) : new Date(),
+            totalPacks:              mintResult.totalPacks || totalQuantity,
+            qrVersion:               'V2_EPHEMERAL_ECDSA',
         });
 
         if (mintResult.publicKeyPem) {
@@ -231,13 +238,47 @@ export const createBatchController = async (req, res) => {
             internalBatchNotes, tags,
         } = req.body;
 
+        const batchCount = await Batch.countDocuments();
+        const feistelBatchId = generateFeistelBatchId(batchCount + 1);
+
+        // ── BLOCKCHAIN FIRST: Anchor batch & generate S3 artifacts ───────────
+        console.log(`[manufacturer-service Batch] Anchoring batch ${systemBatchId} (Feistel: ${feistelBatchId}) on blockchain and generating QR tokens...`);
+        const expiryStr = typeof expiryDate === 'string' ? expiryDate : getISTDateString(expiryDate);
+        
+        let mintResult;
+        try {
+            mintResult = await mintBatchViaPharmaCore({
+                batchId: systemBatchId,
+                totalQuantity: qty,
+                manufacturerId,
+                expiryDate: expiryStr,
+                medicineName,
+                authToken: req.authToken,
+                version: 'v2',
+            });
+        } catch (mintErr) {
+            console.error(`[manufacturer-service Batch] ❌ Blockchain batch commitment failed for ${systemBatchId}:`, mintErr.message);
+            return res.status(502).json({
+                status: 'error',
+                code: 'BLOCKCHAIN_MINT_FAILED',
+                message: `Failed to anchor batch on blockchain: ${mintErr.message}. Batch was not created in database.`,
+            });
+        }
+
+        const bStatus = mintResult.blockchainStatus || (mintResult.bitmapInitialized ? 'COMMITTED' : 'PENDING');
+        const bError  = mintResult.bitmapError || null;
+
+        // ── MongoDB Write — ONLY executed AFTER blockchain status is completed ───
         const batch = await Batch.create({
             batchId,
             systemBatchId,
+            feistelBatchId,
             manufacturerBatchNumber,
             manufacturerId,
             expiryDate,
             totalQuantity: qty,
+            totalPacks: qty,
+            qrVersion: 'V2_EPHEMERAL_ECDSA',
             medicineName,
             manufacturingDate,
             genericName,
@@ -280,68 +321,32 @@ export const createBatchController = async (req, res) => {
             assayResult,
             internalBatchNotes,
             tags,
+            // Guaranteed blockchain & S3 artifact references
+            mintStatus: 'CREATED',
+            s3FileKey: mintResult.s3FileKey,
+            s3DownloadUrl: mintResult.s3DownloadUrl,
+            s3UrlExpiresAt: mintResult.s3UrlExpiresAt || null,
+            s3Mode: mintResult.s3Mode || 'aws',
+            merkleRoot: mintResult.merkleRoot || null,
+            txHash: mintResult.txHash || mintResult.txId || null,
+            blockNumber: mintResult.blockNumber || null,
+            blockchainStatus: bStatus,
+            blockchainError: bError,
+            blockchainRecordedCount: qty,
+            publicKeyPem: mintResult.publicKeyPem || mintResult.batchPubKey || null,
+            batchPubKey: mintResult.batchPubKey || mintResult.publicKeyPem || null,
+            privKeyBurnedAt: mintResult.privKeyBurnedAt ? new Date(mintResult.privKeyBurnedAt) : new Date(),
         });
 
-        // ── Auto-Mint Batch Immediately upon creation ─────────────────────────
-        try {
-            console.log(`[manufacturer-service Batch] Auto-minting batch ${systemBatchId} for ${qty} packs...`);
-            const expiryStr = typeof expiryDate === 'string' ? expiryDate : getISTDateString(expiryDate);
-            const mintResult = await mintBatchViaPharmaCore({
-                batchId: batch.batchId,
-                totalQuantity: batch.totalQuantity,
-                manufacturerId: batch.manufacturerId,
-                expiryDate: expiryStr,
-                medicineName: batch.medicineName,
-                authToken: req.authToken,
-            });
-
-            const bStatus = mintResult.blockchainStatus || (mintResult.backendSubmitted ? 'COMMITTED' : 'FAILED');
-            const bError  = mintResult.blockchainError || (mintResult.backendSubmitted ? null : 'Blockchain submission failed or deferred');
-
-            batch.mintStatus              = 'MINTED';
-            batch.s3FileKey               = mintResult.s3FileKey;
-            batch.s3DownloadUrl           = mintResult.s3DownloadUrl;
-            batch.s3UrlExpiresAt          = mintResult.s3UrlExpiresAt || null;
-            batch.s3Mode                  = mintResult.s3Mode || 'aws';
-            batch.merkleRoot              = mintResult.merkleRoot || null;
-            batch.txHash                  = mintResult.txHash || null;
-            batch.blockNumber             = mintResult.blockNumber || null;
-            batch.blockchainStatus        = bStatus;
-            batch.blockchainError         = bError;
-            batch.blockchainRecordedCount = mintResult.blockchainRecorded || 0;
-            batch.publicKeyPem            = mintResult.publicKeyPem || null;
-            batch.keyId                   = mintResult.keyId || null;
-
-            if (bStatus === 'FAILED') {
-                batch.mintError = bError;
-                console.warn(`[manufacturer-service Batch] ⚠️ Batch ${systemBatchId} minted with Blockchain status FAILED: ${bError}`);
-            }
-
-            await batch.save();
-
-            if (mintResult.publicKeyPem) {
-                await Manufacturer.updateOne(
-                    { manufacturerId: batch.manufacturerId },
-                    {
-                        $addToSet: { publicKeys: mintResult.publicKeyPem },
-                        $set: { publicKeyPem: mintResult.publicKeyPem },
-                    }
-                );
-            }
-
-            console.log(`[manufacturer-service Batch] Batch ${systemBatchId} auto-minted: status ${bStatus} (${mintResult.totalPacks} packs).`);
-        } catch (mintErr) {
-            console.warn(`[manufacturer-service Batch] Auto-mint direct notice: ${mintErr.message}, running background mint`);
-            try {
-                const expiryStr = typeof expiryDate === 'string' ? expiryDate : getISTDateString(expiryDate);
-                runMintJob(
-                    batch.batchId,
-                    manufacturerId,
-                    expiryStr,
-                    batch.totalQuantity,
-                    batch.medicineName,
-                );
-            } catch (jobErr) {}
+        if (mintResult.publicKeyPem || mintResult.batchPubKey) {
+            const pem = mintResult.publicKeyPem || mintResult.batchPubKey;
+            await Manufacturer.updateOne(
+                { manufacturerId: batch.manufacturerId },
+                {
+                    $addToSet: { publicKeys: pem },
+                    $set: { publicKeyPem: pem },
+                }
+            ).catch(() => null);
         }
 
         console.log(
@@ -533,12 +538,13 @@ export const getPublicBatchDetailsController = async (req, res) => {
     try {
         const { batchId } = req.params;
 
-        // Allow resolving by either PharmaChain systemBatchId OR legacy manufacturerBatchNumber
+        // Allow resolving by either PharmaChain systemBatchId OR legacy manufacturerBatchNumber OR Feistel ID
         const batch = await Batch.findOne({
             $or: [
                 { batchId },
                 { systemBatchId: batchId },
                 { manufacturerBatchNumber: batchId },
+                { feistelBatchId: batchId },
             ],
         }).select(
             '-internalBatchNotes -supervisorId -shiftCode -equipmentBatchId' +
@@ -1524,5 +1530,54 @@ export const verifyBatchPackController = async (req, res) => {
     } catch (error) {
         console.error('[manufacturer-service Batch] verifyBatchPackController error:', error.message);
         return res.status(500).json({ code: 'PACK_VERIFY_ERROR', message: error.message });
+    }
+};
+
+/**
+ * POST /api/manufacturer/batch/:batchId/ship
+ * Transitions all packs in the batch from CREATED (0x0) to MINTED (0x1) on Fabric,
+ * approving the batch for distribution and enabling pharmacy intake.
+ */
+export const shipBatchController = async (req, res) => {
+    try {
+        const { batchId }    = req.params;
+        const manufacturerId = req.user.id;
+
+        const batch = await Batch.findOne({
+            manufacturerId,
+            $or: [
+                { batchId },
+                { systemBatchId: batchId },
+                { manufacturerBatchNumber: batchId },
+            ],
+        });
+
+        if (!batch) {
+            return res.status(404).json({ code: 'BATCH_NOT_FOUND', message: `Batch ${batchId} not found` });
+        }
+
+        if (batch.mintStatus === 'MINTED') {
+            return res.status(200).json({
+                status:  'already_shipped',
+                message: `Batch ${batch.batchId} is already shipped and live on blockchain.`,
+                data: batch,
+            });
+        }
+
+        console.log(`[manufacturer-service Batch] Shipping batch ${batch.batchId} — transitioning all packs to MINTED on Fabric...`);
+        await mintBatchOnChainViaPharmaCore({ batchId: batch.batchId, authToken: req.authToken });
+
+        batch.mintStatus = 'MINTED';
+        batch.shippedAt  = new Date();
+        await batch.save();
+
+        return res.status(200).json({
+            status:  'success',
+            message: `Batch ${batch.batchId} approved and shipped. All packs marked MINTED on blockchain.`,
+            data: batch,
+        });
+    } catch (err) {
+        console.error('[manufacturer-service Batch] shipBatchController error:', err.message);
+        return res.status(500).json({ status: 'error', message: err.message });
     }
 };

@@ -5,9 +5,6 @@ import morgan from 'morgan';
 import verifyRouter from '../routes/verify.routes.js';
 import reportRouter from '../routes/report.routes.js';
 import authRouter from '../routes/auth.routes.js';
-import { initIST } from '../utils/time.js';
-
-initIST();
 
 const app = express();
 

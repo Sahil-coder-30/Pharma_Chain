@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PharmaChain — Service Identity Layer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0B1E33;
+    --navy-deep:#071527;
+    --paper:#F6F7FA;
+    --paper-dim:#EBEEF3;
+    --ink:#10192B;
+    --ink-soft:#4A5872;
+    --cyan:#7BD1E0;
+    --cyan-dim:#3E7C8A;
+    --brass:#C89B3C;
+    --brass-dim:#8A6B27;
+    --red:#B5432D;
+    --green:#4F8F63;
+    --line:#D8DEE8;
+    --line-navy:rgba(123,209,224,0.35);
+    --maxw:840px;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-font-smoothing:antialiased;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.6;
+    font-size:16px;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 28px;}
+  .wide{max-width:1040px; margin:0 auto; padding:0 28px;}
+
+  /* ---------- HERO / TITLE BLOCK ---------- */
+  .hero{
+    background:
+      radial-gradient(var(--line-navy) 1px, transparent 1px) 0 0/24px 24px,
+      var(--navy);
+    background-color:var(--navy);
+    color:var(--paper);
+    padding:64px 0 40px;
+    border-bottom:2px solid var(--cyan-dim);
+  }
+  .hero-inner{max-width:1040px; margin:0 auto; padding:0 28px;}
+  .kicker{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.08em;
+    color:var(--cyan);
+    margin:0 0 18px;
+  }
+  h1.title{
+    font-size:clamp(30px, 5vw, 46px);
+    line-height:1.15;
+    margin:0 0 16px;
+    font-weight:600;
+    max-width:16ch;
+  }
+  .dek{
+    font-size:18px;
+    color:#C6D2E2;
+    max-width:52ch;
+    margin:0 0 40px;
+  }
+  .titleblock{
+    border-collapse:collapse;
+    width:100%;
+    max-width:560px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+  }
+  .titleblock td{
+    border:1px solid var(--cyan-dim);
+    padding:9px 12px;
+    vertical-align:top;
+  }
+  .titleblock td.label{
+    color:var(--cyan);
+    width:150px;
+    letter-spacing:0.04em;
+  }
+  .titleblock td.value{
+    color:#E7EDF5;
+  }
+
+  /* ---------- SECTIONS (paper) ---------- */
+  section{padding:56px 0;}
+  section.paper{background:var(--paper);}
+  .sheet-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--cyan-dim);
+    letter-spacing:0.06em;
+    margin:0 0 10px;
+  }
+  h2{
+    font-size:26px;
+    font-weight:600;
+    margin:0 0 20px;
+    max-width:22ch;
+  }
+  p{margin:0 0 16px; color:var(--ink);}
+  p.lede{font-size:17.5px; color:var(--ink-soft);}
+  .rule{border:none; border-top:1px solid var(--line); margin:0;}
+
+  /* ---------- ARCHITECTURE (navy) ---------- */
+  section.blueprint{
+    background:
+      radial-gradient(var(--line-navy) 1px, transparent 1px) 0 0/22px 22px,
+      var(--navy-deep);
+    color:var(--paper);
+    padding:60px 0 48px;
+  }
+  section.blueprint h2{color:#fff;}
+  section.blueprint p.lede{color:#AEBBD0;}
+  .diagram-frame{
+    border:1px solid var(--cyan-dim);
+    padding:18px 10px 8px;
+    margin-top:28px;
+  }
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:22px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:#AEBBD0;
+    margin-top:14px;
+    padding:0 8px;
+  }
+  .legend span.swatch{
+    display:inline-block;
+    width:22px;
+    height:0;
+    border-top:2px solid;
+    margin-right:7px;
+    vertical-align:middle;
+    transform:translateY(-3px);
+  }
+
+  /* ---------- SEQUENCE ---------- */
+  .steps{list-style:none; margin:24px 0 0; padding:0; counter-reset:step;}
+  .steps li{
+    counter-increment:step;
+    display:grid;
+    grid-template-columns:40px 1fr;
+    gap:16px;
+    padding:16px 0;
+    border-top:1px solid var(--line);
+  }
+  .steps li:last-child{border-bottom:1px solid var(--line);}
+  .steps li::before{
+    content:counter(step);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    color:var(--brass-dim);
+    border:1px solid var(--brass);
+    width:30px; height:30px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .steps li strong{display:block; margin-bottom:3px;}
+  .steps li span.tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--cyan-dim);
+  }
+
+  /* ---------- MATRIX TABLE ---------- */
+  table.matrix{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:24px;
+    font-size:15px;
+  }
+  table.matrix th, table.matrix td{
+    text-align:left;
+    padding:14px 16px;
+    border:1px solid var(--line);
+    vertical-align:top;
+  }
+  table.matrix th{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.05em;
+    background:var(--paper-dim);
+    color:var(--ink-soft);
+    font-weight:500;
+  }
+  td.can{border-left:3px solid var(--green);}
+  td.cannot{border-left:3px solid var(--red);}
+  td.can::before{content:"can — "; color:var(--green); font-family:'IBM Plex Mono', monospace; font-size:12px;}
+  td.cannot::before{content:"cannot — "; color:var(--red); font-family:'IBM Plex Mono', monospace; font-size:12px;}
+
+  /* ---------- TWO COLUMN ---------- */
+  .cols{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0;
+    margin-top:24px;
+    border:1px solid var(--line);
+  }
+  .col{padding:22px 24px;}
+  .col + .col{border-left:1px solid var(--line);}
+  .col h3{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.05em;
+    margin:0 0 14px;
+    color:var(--ink-soft);
+  }
+  .col ul{margin:0; padding-left:18px;}
+  .col li{margin-bottom:10px;}
+  .col.unchanged h3{color:var(--cyan-dim);}
+  .col.new h3{color:var(--brass-dim);}
+  .tradeoff{
+    margin-top:22px;
+    padding:18px 20px;
+    background:var(--paper-dim);
+    border-left:3px solid var(--brass);
+    font-size:15px;
+    color:var(--ink-soft);
+  }
+
+  /* ---------- CHECKLIST ---------- */
+  .checklist{list-style:none; margin:24px 0 0; padding:0;}
+  .checklist li{
+    display:grid;
+    grid-template-columns:22px 1fr;
+    gap:12px;
+    padding:12px 0;
+    border-top:1px solid var(--line);
+    font-size:15.5px;
+  }
+  .checklist li:last-child{border-bottom:1px solid var(--line);}
+  .checklist li::before{
+    content:"";
+    width:14px; height:14px;
+    border:1.5px solid var(--ink-soft);
+    margin-top:3px;
+  }
+  .checklist code{
+    font-family:'IBM Plex Mono', monospace;
+    background:var(--paper-dim);
+    padding:1px 6px;
+    font-size:13.5px;
+  }
+
+  /* ---------- PITCH STAMP ---------- */
+  section.pitch{background:var(--paper-dim); padding:64px 0;}
+  .stamp{
+    border:2px solid var(--ink);
+    padding:36px 32px;
+    position:relative;
+    background:var(--paper);
+  }
+  .stamp::before{
+    content:"FOR THE JUDGES";
+    position:absolute;
+    top:-11px; left:28px;
+    background:var(--paper-dim);
+    padding:0 10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:0.08em;
+    color:var(--ink-soft);
+  }
+  .stamp p{
+    font-size:19px;
+    color:var(--ink);
+    margin:0;
+    max-width:58ch;
+  }
+  .stamp p + p{margin-top:16px;}
+
+  footer{
+    padding:30px 0 48px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+
+  @media (max-width:720px){
+    .cols{grid-template-columns:1fr;}
+    .col + .col{border-left:none; border-top:1px solid var(--line);}
+    h1.title{max-width:none;}
+    .titleblock{font-size:11.5px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="kicker">SHEET 01 / 07 — ARCHITECTURE &amp; BUILD PLAN</p>
+    <h1 class="title">A trust root for the machines, not the humans</h1>
+    <p class="dek">Five frontends already authenticate their own users just fine. This is the piece underneath that they can't see: how manufacturer&#8209;service, shopkeeper&#8209;service, and consumer&#8209;service prove to pharma&#8209;core who they are before anything touches the custody ledger.</p>
+    <table class="titleblock">
+      <tr><td class="label">PROJECT</td><td class="value">PharmaChain — SIH 2026</td></tr>
+      <tr><td class="label">SUBJECT</td><td class="value">Service Identity Layer (auth broker)</td></tr>
+      <tr><td class="label">SCOPE</td><td class="value">Service&#8209;to&#8209;service only — no change to user login</td></tr>
+      <tr><td class="label">DATE / REV</td><td class="value">12 Sept 2026 — Rev. 01</td></tr>
+    </table>
+  </div>
+</header>
+
+<section class="paper">
+  <div class="wrap">
+    <p class="sheet-tag">§01 — THE GAP</p>
+    <h2>The part nobody's users ever see</h2>
+    <p class="lede">PharmaChain runs five separate frontends — manufacturer dashboard, shopkeeper dashboard, shopkeeper mobile, consumer mobile, and admin — and every one of them already has working login and registration, including Google sign-in for consumers. None of that is broken, and none of it needs to move.</p>
+    <p>What sits underneath is different. <span class="mono">pharma-core</span> is the service that actually signs and verifies every pack's cryptographic identity. It has no public ingress — it was only ever meant to be reachable by three other services: manufacturer-service, shopkeeper-service, and consumer-service. Right now, nothing formally proves to pharma-core which of those three is calling it, or whether the call is even allowed. That's a machine-identity problem, and it's a different problem from anything the five frontends solve.</p>
+  </div>
+</section>
+
+<section class="blueprint">
+  <div class="wide">
+    <p class="sheet-tag" style="color:var(--cyan);">§02 — ARCHITECTURE</p>
+    <h2>One small broker, one public key set</h2>
+    <p class="lede">The fix is a single new service whose only job is answering one question: is this service who it claims to be, and what is it allowed to do. It speaks OAuth2's client-credentials grant — each of the three services holds its own client ID and secret, and trades that for a short-lived, signed token. pharma-core stops trusting three separate baked-in secrets, and starts trusting one public key set, published in one place.</p>
+
+    <div class="diagram-frame">
+      <svg viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto; display:block;">
+        <defs>
+          <marker id="arrowCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--cyan)"/>
+          </marker>
+          <marker id="arrowBrass" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--brass)"/>
+          </marker>
+          <marker id="arrowDim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#AEBBD0"/>
+          </marker>
+        </defs>
+
+        <!-- private network boundary -->
+        <rect x="718" y="206" width="272" height="184" fill="none" stroke="#AEBBD0" stroke-width="1.5" stroke-dasharray="5 5"/>
+        <text x="854" y="196" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="12" fill="#AEBBD0" letter-spacing="0.06em">NO PUBLIC INGRESS</text>
+
+        <!-- direct-call bezier arcs (service -> pharma-core), arcing above broker -->
+        <path d="M250,84 Q 520,-40 745,278" fill="none" stroke="var(--brass)" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#arrowBrass)"/>
+        <path d="M250,292 Q 520,110 745,300" fill="none" stroke="var(--brass)" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#arrowBrass)"/>
+        <path d="M250,500 Q 520,330 745,322" fill="none" stroke="var(--brass)" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#arrowBrass)"/>
+
+        <!-- token exchange lines (service <-> broker) -->
+        <path d="M250,100 L400,272" fill="none" stroke="var(--cyan)" stroke-width="1.8" marker-end="url(#arrowCyan)"/>
+        <path d="M250,308 L400,308" fill="none" stroke="var(--cyan)" stroke-width="1.8" marker-end="url(#arrowCyan)"/>
+        <path d="M250,516 L400,344" fill="none" stroke="var(--cyan)" stroke-width="1.8" marker-end="url(#arrowCyan)"/>
+
+        <!-- broker -> pharma-core JWKS fetch -->
+        <path d="M610,260 L745,260" fill="none" stroke="#AEBBD0" stroke-width="1.4" stroke-dasharray="2 4" marker-end="url(#arrowDim)"/>
+
+        <!-- manufacturer service -->
+        <rect x="40" y="40" width="210" height="88" fill="var(--navy)" stroke="var(--cyan-dim)" stroke-width="1.5"/>
+        <text x="145" y="76" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14.5" font-weight="600" fill="#fff">manufacturer</text>
+        <text x="145" y="96" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--cyan)">-service</text>
+
+        <!-- shopkeeper service -->
+        <rect x="40" y="248" width="210" height="88" fill="var(--navy)" stroke="var(--cyan-dim)" stroke-width="1.5"/>
+        <text x="145" y="284" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14.5" font-weight="600" fill="#fff">shopkeeper</text>
+        <text x="145" y="304" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--cyan)">-service</text>
+
+        <!-- consumer service -->
+        <rect x="40" y="456" width="210" height="88" fill="var(--navy)" stroke="var(--cyan-dim)" stroke-width="1.5"/>
+        <text x="145" y="492" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="14.5" font-weight="600" fill="#fff">consumer</text>
+        <text x="145" y="512" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="var(--cyan)">-service</text>
+
+        <!-- auth broker -->
+        <rect x="400" y="248" width="210" height="100" fill="var(--navy-deep)" stroke="var(--brass)" stroke-width="1.8"/>
+        <text x="505" y="288" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="15.5" font-weight="600" fill="#fff">auth broker</text>
+        <text x="505" y="308" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--brass)">POST /oauth/token</text>
+        <text x="505" y="324" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--brass)">GET /.well-known/jwks.json</text>
+
+        <!-- pharma-core -->
+        <rect x="745" y="248" width="210" height="100" fill="var(--navy-deep)" stroke="#fff" stroke-width="1.8"/>
+        <text x="850" y="290" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="15.5" font-weight="600" fill="#fff">pharma-core</text>
+        <text x="850" y="309" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#AEBBD0">crypto vault</text>
+        <text x="850" y="325" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#AEBBD0">verifies bearer + role</text>
+      </svg>
+      <div class="legend">
+        <div><span class="swatch" style="border-color:var(--cyan);"></span>token exchange with broker</div>
+        <div><span class="swatch" style="border-color:var(--brass); border-top-style:dashed;"></span>authenticated call to pharma-core</div>
+        <div><span class="swatch" style="border-color:#AEBBD0; border-top-style:dotted;"></span>pharma-core fetching public keys</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="paper">
+  <div class="wrap">
+    <p class="sheet-tag">§03 — HOW ONE REQUEST ACTUALLY FLOWS</p>
+    <h2>Six steps, all of them boring on purpose</h2>
+    <ol class="steps">
+      <li>
+        <div>
+          <strong>Each service is provisioned once.</strong>
+          <span class="tag">client_id + client_secret, stored as env vars</span>
+          <p style="margin-top:6px;">manufacturer-service, shopkeeper-service, and consumer-service each get their own credential pair from the broker. Nothing is shared between them.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>A service asks the broker for a token.</strong>
+          <span class="tag">POST /oauth/token</span>
+          <p style="margin-top:6px;">On startup, or whenever its cached token is close to expiring, the service sends its client ID and secret to the broker.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>The broker signs a short-lived token.</strong>
+          <span class="tag">ECDSA P-256, ~10–15 min TTL, role claim embedded</span>
+          <p style="margin-top:6px;">The token carries who the caller is — manufacturer, shopkeeper, or consumer — not just that it's valid.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>The token lives in memory only.</strong>
+          <span class="tag">no disk, no Redis</span>
+          <p style="margin-top:6px;">Each service instance holds its own copy. Reissuing one is cheap, so nothing needs to be shared across instances.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>The service calls pharma-core with it.</strong>
+          <span class="tag">Authorization: Bearer &lt;token&gt;</span>
+          <p style="margin-top:6px;">Every call to pharma-core now carries proof of who's calling, not just network trust.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>pharma-core verifies and enforces.</strong>
+          <span class="tag">checks signature via cached JWKS, then checks role against the route</span>
+          <p style="margin-top:6px;">If the role doesn't match what the route allows, the request is rejected before it reaches the ledger.</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="paper" style="background:var(--paper-dim); padding-top:56px;">
+  <div class="wrap">
+    <p class="sheet-tag">§04 — WHO'S ALLOWED TO DO WHAT</p>
+    <h2>The role claim is the custody rule, enforced in code</h2>
+    <p class="lede">A manufacturer ships. A shopkeeper sells. A consumer only ever looks. That's already true in the real world — the role claim is just what lets pharma-core refuse to let anyone break it.</p>
+    <table class="matrix">
+      <tr>
+        <th style="width:26%;">Service</th>
+        <th>Allowed / not allowed</th>
+      </tr>
+      <tr>
+        <td><strong>manufacturer-service</strong></td>
+        <td>
+          <div class="can">mint a batch, ship it to a shopkeeper</div>
+          <div class="cannot" style="margin-top:8px;">mark a pack sold, intake a shipment</div>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>shopkeeper-service</strong></td>
+        <td>
+          <div class="can">intake a shipment, mark a pack sold</div>
+          <div class="cannot" style="margin-top:8px;">mint a batch, ship a batch</div>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>consumer-service</strong></td>
+        <td>
+          <div class="can">verify a pack (read-only)</div>
+          <div class="cannot" style="margin-top:8px;">any write to custody state</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<section class="paper">
+  <div class="wrap">
+    <p class="sheet-tag">§05 — IS THIS OVER-ENGINEERING?</p>
+    <h2>What actually changes, and what stays exactly as it is</h2>
+    <div class="cols">
+      <div class="col unchanged">
+        <h3>UNCHANGED</h3>
+        <ul>
+          <li>All five frontends' login and registration flows — Google sign-in included</li>
+          <li>pharma-core's existing pack-signing and JWKS logic for QR tokens</li>
+          <li>Every service's own business logic, routes, and database</li>
+        </ul>
+      </div>
+      <div class="col new">
+        <h3>NEW — AND DELIBERATELY NARROW</h3>
+        <ul>
+          <li>One stateless service, two endpoints: issue a token, publish public keys</li>
+          <li>No business data, no ledger access, no user records held by it</li>
+          <li>One trust root instead of three separate ad hoc assumptions</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tradeoff">
+      <strong>The honest cost:</strong> this is one more service to deploy and watch, and it does become the one place machine trust flows through. But it can't mint a pack, mark one sold, or write to the ledger — the worst a fault in it can do is fail closed, not misfire a custody transition. And for a hackathon build, an in-memory token per instance was chosen over a shared cache like Redis on purpose: a token is cheap enough to reissue that caching it across a network hop would spend real infrastructure cost to save a call that barely happens.
+    </div>
+  </div>
+</section>
+
+<section class="paper" style="background:var(--paper-dim);">
+  <div class="wrap">
+    <p class="sheet-tag">§06 — BUILD CHECKLIST</p>
+    <h2>What the broker itself needs</h2>
+    <ul class="checklist">
+      <li><span></span><div><code>POST /oauth/token</code> — client_credentials grant; validates client_id/secret, returns an ECDSA P-256–signed JWT with a role claim, ~10–15 min expiry</div></li>
+      <li><span></span><div><code>GET /.well-known/jwks.json</code> — public keys only, versioned by key ID so they can rotate without breaking a token mid-flight</div></li>
+      <li><span></span><div>A small client registry — client_id, hashed secret, role. Three rows is enough to start.</div></li>
+      <li><span></span><div>Verification middleware inside pharma-core — cache the JWKS, check the signature, check the role against a per-route permission table, reject before the ledger is touched</div></li>
+      <li><span></span><div>No shared token store — each instance holds its own token in memory, re-asks the broker on near-expiry or a 401</div></li>
+    </ul>
+  </div>
+</section>
+
+<section class="pitch">
+  <div class="wrap">
+    <p class="sheet-tag">§07 — FOR THE ROOM</p>
+    <div class="stamp">
+      <p>Every login our users make was already solved before this — that part doesn't change. What we built is the one piece that wasn't: a way for our own services to prove who they are to each other before anything touches the custody ledger.</p>
+      <p>A manufacturer's service physically cannot mark a pack sold. Only a shopkeeper's service can — because that's who's allowed to make a sale in the real world, and now it's true in the code too.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Prepared as an architecture reference for PharmaChain — SIH 2026. Not yet implemented.
+  </div>
+</footer>
+
+</body>
+</html>

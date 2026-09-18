@@ -153,3 +153,50 @@ export const getPackInfo = async (packId, authToken) => {
     }
 };
 
+/**
+ * V2.1 Nibble: Atomically advances a pack's supply-chain nibble state.
+ * Valid: MINTED → AT_SHOP → SOLD; ANY → REVOKED
+ * @param {Object} params - { batchId, packIndex, newState: 'AT_SHOP'|'SOLD'|'REVOKED', authToken }
+ * @returns {Promise<{ status: string, newState?: string, packIndex: number, alert?: string }>}
+ */
+export const setPackStateV2 = async ({ batchId, packIndex, newState, shopId, sellerId, operatorId, location, timestamp, authToken }) => {
+    try {
+        const client = getCoreClient(authToken);
+        const response = await client.post('/core/chain/set-pack-state', {
+            batchId,
+            packIndex,
+            newState,
+            shopId,
+            sellerId,
+            operatorId,
+            location,
+            timestamp,
+        });
+        return response.data;
+    } catch (err) {
+        console.error(`[shopkeeper-service CoreClient] setPackStateV2 error: ${err.message}`);
+        throw err;
+    }
+};
+
+/**
+ * V2.1 Nibble: Read-only nibble state query (does NOT mutate ledger).
+ * @param {Object} params - { batchId, packIndex, authToken }
+ * @returns {Promise<{ status: 'MINTED'|'AT_SHOP'|'SOLD'|'REVOKED', state: number }>}
+ */
+export const getPackStateV2 = async ({ batchId, packIndex, authToken }) => {
+    try {
+        const client = getCoreClient(authToken);
+        const response = await client.get('/core/chain/pack-state', {
+            params: { batchId, packIndex },
+        });
+        return response.data;
+    } catch (err) {
+        console.warn(`[shopkeeper-service CoreClient] getPackStateV2 error: ${err.message}`);
+        return { status: 'UNKNOWN', error: err.message };
+    }
+};
+
+/** Alias for getPackStateV2 — used by scan.controller.js */
+export const checkPackBit = getPackStateV2;
+

@@ -23,10 +23,10 @@ export const extractTokenAndHash = (input) => {
         try {
             const url = new URL(trimmed);
 
-            // Extract token from query parameter
-            const token = url.searchParams.get('token');
+            // Extract token from query parameter (?t= or ?token=)
+            const token = url.searchParams.get('t') || url.searchParams.get('token');
             if (!token) {
-                throw new Error('URL does not contain a "token" query parameter.');
+                throw new Error('URL does not contain a "token" or "t" query parameter.');
             }
 
             // Extract packHash from path: /verify/:packHash

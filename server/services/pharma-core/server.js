@@ -9,13 +9,23 @@ initIST();
 
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, async () => {
-    // ── Load RSA-4096 identity keypair first (needed by all subsequent ops) ──
-    await initKeys();
+// ── Crypto Bootstrap ─────────────────────────────────────────────────────────
+// Initialize RSA identity keypair and manufacturer EC keystore before accepting
+// any requests. A failure here is fatal — exit cleanly so Kubernetes restarts.
+(async () => {
+    try {
+        // Load RSA-4096 identity keypair first (needed by all subsequent ops)
+        await initKeys();
 
-    // ── Initialize JSON keystore (manufacturer EC keys) ───────────────────────
-    await initKeystore();
+        // Initialize JSON keystore (manufacturer EC keys)
+        await initKeystore();
 
-    console.log(`[pharma-core] 🔐 Server ready on port ${PORT}`);
-    console.log(`[pharma-core]    JWKS: http://localhost:${PORT}/.well-known/jwks.json`);
-});
+        app.listen(PORT, () => {
+            console.log(`[pharma-core] 🔐 Server ready on port ${PORT}`);
+            console.log(`[pharma-core]    JWKS: http://localhost:${PORT}/.well-known/jwks.json`);
+        });
+    } catch (err) {
+        console.error(`[pharma-core] FATAL: Crypto initialization failed — ${err.message}`);
+        process.exit(1);
+    }
+})();

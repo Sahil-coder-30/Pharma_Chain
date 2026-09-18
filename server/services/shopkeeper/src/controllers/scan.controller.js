@@ -1,5 +1,5 @@
 import { extractTokenAndHash } from '../utils/qrParser.util.js';
-import { verifyToken, getPackStatus, recordIntake, recordSale } from '../services/coreClient.service.js';
+import { verifyToken, getPackStatus, recordIntake, recordSale, setPackStateV2, getPackStateV2, checkPackBit } from '../services/coreClient.service.js';
 import { getPublicBatchMetadata } from '../services/manufacturerClient.service.js';
 import { PackEvent, Inventory } from '../models/inventory.model.js';
 import Shopkeeper from '../models/shopkeeper.model.js';
@@ -30,7 +30,61 @@ export const intakeScanController = async (req, res) => {
         }
 
         const { payload, packHash } = verifyResult;
-        const { batchId, expiryDate, manufacturerId, serial } = payload;
+        const isV2 = payload && (payload.b !== undefined && payload.i !== undefined);
+        const batchId = isV2 ? payload.b : payload.batchId;
+        const packIndex = isV2 ? parseInt(payload.i, 10) : null;
+        let expiryDate = payload.expiryDate;
+        let manufacturerId = payload.manufacturerId;
+        const serial = isV2 ? `idx-${payload.i}` : payload.serial;
+
+        // Fetch batch metadata if V2
+        let batchMeta = null;
+        if (isV2) {
+            batchMeta = await getPublicBatchMetadata(batchId).catch(() => null);
+            const batchInfo = batchMeta?.batch || batchMeta;
+            if (batchInfo?.expiryDate) expiryDate = batchInfo.expiryDate;
+            if (batchInfo?.manufacturerId) manufacturerId = batchInfo.manufacturerId;
+
+            // V2 bounds check
+            if (batchInfo?.totalPacks != null && packIndex >= batchInfo.totalPacks) {
+                return res.status(400).json({
+                    status: 'error',
+                    code: 'OUT_OF_BOUNDS',
+                    message: `Pack index ${packIndex} exceeds batch total packs ${batchInfo.totalPacks}. Counterfeit detected.`,
+                });
+            }
+
+            // V2.1 Nibble: Atomically register pack at pharmacy (MINTED → AT_SHOP) + record forensic custody
+            let intakeStateResult;
+            try {
+                intakeStateResult = await setPackStateV2({
+                    batchId,
+                    packIndex,
+                    newState: 'AT_SHOP',
+                    shopId: shopkeeperId,
+                    operatorId,
+                    location: req.body.location || 'Registered Pharmacy Intake Location',
+                    timestamp: getISTISOString(),
+                    authToken: req.headers.authorization?.replace(/^Bearer\s+/i, ''),
+                });
+            } catch (stateErr) {
+                console.error(`[shopkeeper-service Scan] V2.1 AT_SHOP state error: ${stateErr.message}`);
+                // Non-fatal — continue intake even if Fabric is unreachable
+            }
+            const intakeStatus = intakeStateResult?.status || 'OK';
+            if (intakeStatus === 'ALREADY_SOLD' || intakeStatus === 'REVOKED') {
+                return res.status(409).json({
+                    status: 'error',
+                    code: intakeStatus === 'REVOKED' ? 'RECALLED' : 'ALREADY_SOLD',
+                    message: intakeStatus === 'REVOKED'
+                        ? 'CRITICAL: Batch has been recalled by CDSCO. Cannot intake.'
+                        : 'This pack has already been sold. Duplicate intake rejected.',
+                });
+            }
+            if (intakeStatus === 'ALREADY_AT_SHOP') {
+                console.warn(`[shopkeeper-service Scan] Pack ${batchId}:${packIndex} already AT_SHOP — duplicate intake allowed (idempotent).`);
+            }
+        }
 
         // Expiry check
         if (expiryDate && new Date(expiryDate) < new Date()) {
@@ -61,22 +115,26 @@ export const intakeScanController = async (req, res) => {
         const location = req.body.location || `${latitude}, ${longitude} | ${shopAddress}`;
         const timestamp = getISTISOString();
 
-        // Fabric transition MINTED → AT_SHOP (non-fatal)
-        await recordIntake({
-            packHash,
-            shopId: shopkeeperId,
-            operatorId,
-            manufacturerId,
-            shopName,
-            licenseNumber,
-            location,
-            latitude,
-            longitude,
-            timestamp,
-        }).catch(err => console.warn(`[shopkeeper-service Scan] Fabric intake failed (non-fatal): ${err.message}`));
+        // Fabric transition MINTED → AT_SHOP (for V1 only; V2 uses pure bitmap)
+        if (!isV2) {
+            await recordIntake({
+                packHash,
+                shopId: shopkeeperId,
+                operatorId,
+                manufacturerId,
+                shopName,
+                licenseNumber,
+                location,
+                latitude,
+                longitude,
+                timestamp,
+            }).catch(err => console.warn(`[shopkeeper-service Scan] Fabric intake failed (non-fatal): ${err.message}`));
+        }
 
-        // Fetch medicine name from JWT payload first, fallback to manufacturer-service
-        const batchMeta    = await getPublicBatchMetadata(batchId).catch(() => null);
+        // Fetch medicine name
+        if (!batchMeta) {
+            batchMeta = await getPublicBatchMetadata(batchId).catch(() => null);
+        }
         const medicineName = payload.medicineName || batchMeta?.medicineName || batchMeta?.batch?.medicineName || `Batch ${batchId}`;
         const expiryAsDate = expiryDate ? new Date(expiryDate) : null;
 
@@ -120,13 +178,22 @@ export const intakeScanController = async (req, res) => {
         return res.status(200).json({
             status:  'success',
             message: 'Stock added successfully ✅',
-            data:    { packHash, batchId, serial: serial || null, expiryDate, manufacturerId, medicineName },
+            data:    {
+                packHash,
+                batchId,
+                serial: serial || null,
+                expiryDate,
+                manufacturerId,
+                medicineName,
+                custody: intakeStateResult?.custody || null,
+            },
         });
     } catch (err) {
         console.error('[shopkeeper-service Scan] intakeScanController:', err.message);
         return res.status(500).json({ status: 'error', message: err.message });
     }
 };
+
 
 // ── Sale Scan — POST /api/shopkeeper/scan/sale ────────────────────────────────
 export const saleScanController = async (req, res) => {
@@ -153,7 +220,27 @@ export const saleScanController = async (req, res) => {
         }
 
         const { payload, packHash } = verifyResult;
-        const { batchId, expiryDate, serial } = payload;
+        const isV2 = payload && (payload.b !== undefined && payload.i !== undefined);
+        const batchId = isV2 ? payload.b : payload.batchId;
+        const packIndex = isV2 ? parseInt(payload.i, 10) : null;
+        let expiryDate = payload.expiryDate;
+        const serial = isV2 ? `idx-${payload.i}` : payload.serial;
+
+        // If V2, fetch batch metadata for expiryDate and bounds check
+        if (isV2) {
+            const batchMeta = await getPublicBatchMetadata(batchId).catch(() => null);
+            const batchInfo = batchMeta?.batch || batchMeta;
+            if (batchInfo?.expiryDate) {
+                expiryDate = batchInfo.expiryDate;
+            }
+            if (batchInfo?.totalPacks != null && packIndex >= batchInfo.totalPacks) {
+                return res.status(400).json({
+                    status: 'error',
+                    code: 'OUT_OF_BOUNDS',
+                    message: `Pack index ${packIndex} exceeds batch total packs ${batchInfo.totalPacks}. Counterfeit detected.`,
+                });
+            }
+        }
 
         // Expiry before sale
         if (expiryDate && new Date(expiryDate) < new Date()) {
@@ -161,24 +248,6 @@ export const saleScanController = async (req, res) => {
                 status:  'error',
                 code:    'EXPIRED',
                 message: `Medicine expired on ${expiryDate}. Sale blocked.`,
-            });
-        }
-
-        // Tier 2: Fabric ledger state check
-        const statusResult = await getPackStatus(packHash, batchId);
-        const ledgerStatus = statusResult.status || statusResult.custodyState || 'NOT_FOUND';
-
-        if (ledgerStatus === 'RECALLED' || ledgerStatus === 'Recalled') {
-            return res.status(409).json({ status: 'error', code: 'RECALLED', message: 'CRITICAL: This batch has been recalled. Sale blocked.' });
-        }
-        if (ledgerStatus === 'SOLD' || ledgerStatus === 'Sold') {
-            return res.status(409).json({ status: 'error', code: 'ALREADY_SOLD', message: 'This pack has already been sold. Possible duplicate or counterfeit.' });
-        }
-        if (ledgerStatus !== 'AT_SHOP' && ledgerStatus !== 'AtShop' && ledgerStatus !== 'NOT_FOUND') {
-            return res.status(400).json({
-                status:  'error',
-                code:    'NOT_RECEIVED_AT_SHOP',
-                message: `Pack cannot be sold — ledger status: ${ledgerStatus}. Complete intake scan first.`,
             });
         }
 
@@ -192,18 +261,89 @@ export const saleScanController = async (req, res) => {
         const location = req.body.location || `${latitude}, ${longitude} | ${shopAddress}`;
         const timestamp = getISTISOString();
 
-        // Fabric transition AT_SHOP → SOLD (non-fatal)
-        await recordSale({
-            packHash,
-            shopId: shopkeeperId,
-            operatorId,
-            shopName,
-            licenseNumber,
-            location,
-            latitude,
-            longitude,
-            timestamp,
-        }).catch(err => console.warn(`[shopkeeper-service Scan] Fabric sale failed (non-fatal): ${err.message}`));
+        // Tier 2: V2.1 Nibble state machine — advance AT_SHOP → SOLD atomically + record forensic custody
+        let saleStateResult = null;
+        if (isV2) {
+            try {
+                saleStateResult = await setPackStateV2({
+                    batchId,
+                    packIndex,
+                    newState: 'SOLD',
+                    sellerId: shopkeeperId,
+                    operatorId,
+                    location,
+                    timestamp,
+                    authToken: req.headers.authorization?.replace(/^Bearer\s+/i, ''),
+                });
+            } catch (saleErr) {
+                const errData = saleErr.response?.data;
+                if (errData?.status === 'ALREADY_SOLD' || saleErr.message?.includes('ALREADY_SOLD')) {
+                    return res.status(409).json({
+                        status: 'error',
+                        code: 'ALREADY_SOLD',
+                        message: 'This pack has already been sold. Possible duplicate or counterfeit.',
+                        originalSaleCustody: errData?.originalSaleCustody || null,
+                    });
+                }
+                if (errData?.status === 'REVOKED' || saleErr.message?.includes('RECALLED')) {
+                    return res.status(409).json({ status: 'error', code: 'RECALLED', message: 'CRITICAL: This batch has been recalled. Sale blocked.' });
+                }
+                throw saleErr;
+            }
+
+            if (saleStateResult?.status === 'ALREADY_SOLD') {
+                return res.status(409).json({
+                    status: 'error',
+                    code: 'ALREADY_SOLD',
+                    message: 'This pack has already been sold. Possible duplicate or counterfeit.',
+                    originalSaleCustody: saleStateResult?.originalSaleCustody || null,
+                });
+            }
+            if (saleStateResult?.status === 'REVOKED' || saleStateResult?.reason === 'BATCH_RECALLED') {
+                return res.status(409).json({ status: 'error', code: 'RECALLED', message: 'CRITICAL: This batch has been recalled. Sale blocked.' });
+            }
+            // Supply-chain diversion: pack never passed through a verified pharmacy
+            if (saleStateResult?.alert === 'SUPPLY_CHAIN_DIVERSION' || saleStateResult?.currentState === 'MINTED') {
+                return res.status(409).json({
+                    status: 'error',
+                    code: 'SUPPLY_CHAIN_DIVERSION',
+                    message: '⚠️ ALERT: This medicine was never registered at any pharmacy. It may have been stolen in transit. Do NOT sell.',
+                    currentState: saleStateResult?.currentState,
+                });
+            }
+        } else {
+            const statusResult = await getPackStatus(packHash, batchId);
+            const ledgerStatus = statusResult.status || statusResult.custodyState || 'NOT_FOUND';
+
+            if (ledgerStatus === 'RECALLED' || ledgerStatus === 'Recalled') {
+                return res.status(409).json({ status: 'error', code: 'RECALLED', message: 'CRITICAL: This batch has been recalled. Sale blocked.' });
+            }
+            if (ledgerStatus === 'SOLD' || ledgerStatus === 'Sold') {
+                return res.status(409).json({ status: 'error', code: 'ALREADY_SOLD', message: 'This pack has already been sold. Possible duplicate or counterfeit.' });
+            }
+            if (ledgerStatus !== 'AT_SHOP' && ledgerStatus !== 'AtShop' && ledgerStatus !== 'NOT_FOUND') {
+                return res.status(400).json({
+                    status:  'error',
+                    code:    'NOT_RECEIVED_AT_SHOP',
+                    message: `Pack cannot be sold — ledger status: ${ledgerStatus}. Complete intake scan first.`,
+                });
+            }
+        }
+
+        // Fabric transition AT_SHOP → SOLD (non-fatal, V1 legacy only)
+        if (!isV2) {
+            await recordSale({
+                packHash,
+                shopId: shopkeeperId,
+                operatorId,
+                shopName,
+                licenseNumber,
+                location,
+                latitude,
+                longitude,
+                timestamp,
+            }).catch(err => console.warn(`[shopkeeper-service Scan] Fabric sale failed (non-fatal): ${err.message}`));
+        }
 
         // Write audit trail + decrement inventory
         await PackEvent.create({
@@ -231,6 +371,7 @@ export const saleScanController = async (req, res) => {
                 batchId,
                 serial: serial || null,
                 soldAt: timestamp,
+                custody: saleStateResult?.custody || null,
                 shop: {
                     shopId: shopkeeperId,
                     name: shopName,
@@ -268,14 +409,35 @@ export const authenticatedScanController = async (req, res) => {
         }
 
         const { payload, packHash } = verifyResult;
-        const { batchId, expiryDate } = payload;
+        const isV2 = payload && (payload.b !== undefined && payload.i !== undefined);
+        const batchId = isV2 ? payload.b : payload.batchId;
+        const packIndex = isV2 ? parseInt(payload.i, 10) : null;
+        let expiryDate = payload.expiryDate;
+
+        if (isV2) {
+            const batchMeta = await getPublicBatchMetadata(batchId).catch(() => null);
+            const batchInfo = batchMeta?.batch || batchMeta;
+            if (batchInfo?.expiryDate) expiryDate = batchInfo.expiryDate;
+        }
 
         if (expiryDate && new Date(expiryDate) < new Date()) {
             return res.status(200).json({ status: 'error', code: 'EXPIRED', message: `Expired on ${expiryDate}.`, valid: true, payload });
         }
 
-        const statusResult = await getPackStatus(packHash, batchId);
-        const ledgerStatus = statusResult.status || 'NOT_FOUND';
+        let ledgerStatus = 'NOT_FOUND';
+        let detail = null;
+
+        if (isV2) {
+            const bitResult = await checkPackBit({ batchId, packIndex }).catch(() => null);
+            if (bitResult?.status === 'DUPLICATE') ledgerStatus = 'SOLD';
+            else if (bitResult?.status === 'RECALLED') ledgerStatus = 'RECALLED';
+            else if (bitResult?.status === 'OK') ledgerStatus = 'MINTED';
+            else ledgerStatus = bitResult?.status || 'UNKNOWN';
+        } else {
+            const statusResult = await getPackStatus(packHash, batchId);
+            ledgerStatus = statusResult.status || 'NOT_FOUND';
+            detail = statusResult.detail || null;
+        }
 
         return res.status(200).json({
             status: 'success',
@@ -283,7 +445,7 @@ export const authenticatedScanController = async (req, res) => {
             packHash,
             payload,
             ledgerStatus,
-            detail: statusResult.detail || null,
+            detail,
         });
     } catch (err) {
         console.error('[shopkeeper-service Scan] authenticatedScanController:', err.message);
@@ -314,7 +476,16 @@ export const customerScanController = async (req, res) => {
         }
 
         const { payload, packHash } = verifyResult;
-        const { batchId, expiryDate } = payload;
+        const isV2 = payload && (payload.b !== undefined && payload.i !== undefined);
+        const batchId = isV2 ? payload.b : payload.batchId;
+        const packIndex = isV2 ? parseInt(payload.i, 10) : null;
+        let expiryDate = payload.expiryDate;
+
+        if (isV2) {
+            const batchMeta = await getPublicBatchMetadata(batchId).catch(() => null);
+            const batchInfo = batchMeta?.batch || batchMeta;
+            if (batchInfo?.expiryDate) expiryDate = batchInfo.expiryDate;
+        }
 
         if (expiryDate && new Date(expiryDate) < new Date()) {
             return res.status(200).json({
@@ -327,9 +498,20 @@ export const customerScanController = async (req, res) => {
             });
         }
 
-        const statusResult = await getPackStatus(packHash, batchId);
-        const ledgerStatus = statusResult.status || 'NOT_FOUND';
-        const detail = statusResult.detail || {};
+        let ledgerStatus = 'NOT_FOUND';
+        let detail = {};
+
+        if (isV2) {
+            const bitResult = await checkPackBit({ batchId, packIndex }).catch(() => null);
+            if (bitResult?.status === 'DUPLICATE') ledgerStatus = 'Sold';
+            else if (bitResult?.status === 'RECALLED') ledgerStatus = 'Recalled';
+            else if (bitResult?.status === 'OK') ledgerStatus = 'Packaged';
+            else ledgerStatus = bitResult?.status || 'UNKNOWN';
+        } else {
+            const statusResult = await getPackStatus(packHash, batchId);
+            ledgerStatus = statusResult.status || 'NOT_FOUND';
+            detail = statusResult.detail || {};
+        }
 
         let uiState = 'GENUINE';
         if (ledgerStatus === 'Recalled' || ledgerStatus === 'RECALLED') uiState = 'RECALLED';
@@ -352,6 +534,7 @@ export const customerScanController = async (req, res) => {
             sellingTime:   detail.sellingTime || null,
             timestamp:     detail.timestamp || null,
         } : null;
+
 
         if (dispensingShop?.shopId) {
             try {
@@ -426,7 +609,7 @@ export const customerScanController = async (req, res) => {
             payload,
             ledgerStatus,
             dispensingShop,
-            detail: statusResult.detail || null,
+            detail: detail || null,
         });
     } catch (err) {
         console.error('[shopkeeper-service Scan] customerScanController:', err.message);

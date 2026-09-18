@@ -1,4 +1,4 @@
-import { verifyToken, getPackStatus } from '../services/coreClient.service.js';
+import { verifyToken, getPackStatus, getPackState, checkPackBit } from '../services/coreClient.service.js';
 import { getPublicBatchMetadata } from '../services/manufacturerClient.service.js';
 import { getPublicShopkeeperProfile } from '../services/shopkeeperClient.service.js';
 import { getISTISOString, formatISTDateTime } from '../utils/time.js';
@@ -6,14 +6,15 @@ import { getISTISOString, formatISTDateTime } from '../utils/time.js';
 // ── Constants ─────────────────────────────────────────────────────────────────
 // The 8 consumer UI verification states as defined in the architecture.
 const UI_STATE = Object.freeze({
-    GENUINE:            'GENUINE',            // Valid sig, not expired, AtShop or Packaged
-    PURCHASED_RECENTLY: 'PURCHASED_RECENTLY', // Valid sig, sold within <= 2 days (48h)
-    ALREADY_SOLD:       'ALREADY_SOLD',       // Valid sig, sold > 2 days ago
-    RECALLED:           'RECALLED',           // Valid sig, batch recalled
-    EXPIRED:            'EXPIRED',            // Valid sig, expiryDate < today
-    AT_SHOP:            'AT_SHOP',            // Valid sig, verified at registered pharmacy
-    COUNTERFEIT:        'COUNTERFEIT',        // Invalid signature
-    NOT_FOUND:          'NOT_FOUND',          // Valid sig, no on-chain MFG event
+    GENUINE:                 'GENUINE',                 // Valid sig, not expired, registered at pharmacy
+    PURCHASED_RECENTLY:      'PURCHASED_RECENTLY',      // Valid sig, sold within <= 2 days (48h)
+    ALREADY_SOLD:            'ALREADY_SOLD',            // Valid sig, sold > 2 days ago
+    RECALLED:                'RECALLED',                // Valid sig, batch recalled
+    EXPIRED:                 'EXPIRED',                 // Valid sig, expiryDate < today
+    AT_SHOP:                 'AT_SHOP',                 // Valid sig, verified at registered pharmacy
+    SUPPLY_CHAIN_DIVERSION:  'SUPPLY_CHAIN_DIVERSION',  // ⚠️ V2.1: pack in MINTED state — never reached any pharmacy
+    COUNTERFEIT:             'COUNTERFEIT',             // Invalid signature
+    NOT_FOUND:               'NOT_FOUND',               // Valid sig, no on-chain MFG event
 });
 
 // ── Selling Timestamp & Relative Time Parsers ─────────────────────────────────
@@ -98,9 +99,10 @@ const mapStatusToUiState = (blockchainStatus) => {
 // ── URL & Token Parser Helper ──────────────────────────────────────────────────
 /**
  * Intelligently extracts the raw signed JWT token and packHash whether the scanner provides:
- *   1. Full verify URL: "https://pharmachain.gov.in/verify/a8f5f167...?token=eyJhbGci..."
- *   2. Path param URL:  "https://pharmachain.gov.in/verify/a8f5f167..."
- *   3. Raw JWT string:  "eyJhbGciOiJFUzI1Ni..."
+ *   1. V2 Compact verify URL: "https://pharmachain.gov.in/v?t=eyJhbGci..."
+ *   2. Full verify URL: "https://pharmachain.gov.in/verify/a8f5f167...?token=eyJhbGci..."
+ *   3. Path param URL:  "https://pharmachain.gov.in/verify/a8f5f167..."
+ *   4. Raw JWT string:  "eyJhbGciOiJFUzI1Ni..."
  */
 const extractTokenAndHashFromQrData = (input) => {
     if (!input || typeof input !== 'string') return { token: '', hash: '' };
@@ -116,12 +118,12 @@ const extractTokenAndHashFromQrData = (input) => {
         }
     }
 
-    if (raw.includes('token=')) {
+    if (raw.includes('token=') || raw.includes('?t=') || raw.includes('&t=')) {
         try {
-            const urlObj = new URL(raw.startsWith('http') ? raw : `https://pharmachain.gov.in/${raw}`);
-            token = urlObj.searchParams.get('token') || raw;
+            const urlObj = new URL(raw.startsWith('http') ? raw : `https://pharmachain.gov.in/${raw.replace(/^\/?/, '')}`);
+            token = urlObj.searchParams.get('t') || urlObj.searchParams.get('token') || raw;
         } catch {
-            const match = raw.match(/[?&]token=([^&]+)/);
+            const match = raw.match(/[?&](?:token|t)=([^&]+)/);
             if (match && match[1]) token = decodeURIComponent(match[1]);
         }
     }
@@ -156,10 +158,29 @@ export const verifyQrController = async (req, res) => {
         }
 
         const { payload, packHash } = verifyResult;
-        const { batchId, expiryDate, manufacturerId, medicineName: payloadMedName } = payload;
+        const isV2 = payload.b !== undefined && payload.i !== undefined;
+        const batchId = isV2 ? payload.b : payload.batchId;
+        const packIndex = isV2 ? parseInt(payload.i, 10) : null;
+        const expiryDate = payload.expiryDate;
+        const manufacturerId = payload.manufacturerId;
+        const payloadMedName = payload.medicineName;
 
         // ── Non-blocking metadata enrichment from manufacturer-service ────────
         const batchMetadata = await getPublicBatchMetadata(batchId);
+
+        // ── V2 Bounds Check (Instant zero-crypto bounds checking) ──────────────
+        if (isV2 && batchMetadata?.totalPacks != null) {
+            const maxPacks = parseInt(batchMetadata.totalPacks, 10);
+            if (packIndex < 0 || packIndex >= maxPacks) {
+                return res.status(200).json({
+                    status: 'success',
+                    uiState: UI_STATE.COUNTERFEIT,
+                    message: `COUNTERFEIT WARNING: Pack index #${packIndex} is out of bounds for batch ${batchId} (Total: ${maxPacks}).`,
+                    valid: false,
+                    scannedHash: parsedUrlHash || null,
+                });
+            }
+        }
 
         const medicineInfo = {
             medicineName:      batchMetadata?.medicineName || payloadMedName || 'Verified Medicine',
@@ -176,15 +197,18 @@ export const verifyQrController = async (req, res) => {
             manufacturerName:  batchMetadata?.manufacturerName || batchMetadata?.companyName || manufacturerId,
             productionSite:    batchMetadata?.productionSite || null,
             mfgLicenseNumber:  batchMetadata?.mfgLicenseNumber || null,
+            packIndex:         packIndex,
+            qrVersion:         isV2 ? 'V2_EPHEMERAL_ECDSA' : 'V1',
         };
 
         // ── Check expiry date ─────────────────────────────────────────────────
-        if (new Date(expiryDate) < new Date()) {
+        const effExpiry = batchMetadata?.expiryDate || expiryDate;
+        if (effExpiry && new Date(effExpiry) < new Date()) {
             // UI State 4 — EXPIRED
             return res.status(200).json({
                 status: 'success',
                 uiState: UI_STATE.EXPIRED,
-                message: `EXPIRED: Medicine passed expiration date on ${expiryDate}. Do not consume.`,
+                message: `EXPIRED: Medicine passed expiration date on ${effExpiry}. Do not consume.`,
                 valid: true,
                 payload,
                 medicine: medicineInfo,
@@ -194,14 +218,88 @@ export const verifyQrController = async (req, res) => {
 
         // ── Tier 2: Blockchain status lookup ──────────────────────────────────
         let statusResult = { status: 'MINTED', liveOnChain: false };
-        try {
-            statusResult = await getPackStatus(packHash, batchId);
-        } catch (err) {
-            console.warn(`[consumer-service Verify] ⚠️ Blockchain lookup error: ${err.message}`);
-        }
+        let uiState = UI_STATE.GENUINE;
 
-        const rawStatus = statusResult.status || statusResult.custodyState || 'MINTED';
-        let uiState = mapStatusToUiState(rawStatus);
+        if (isV2) {
+            // ── V2.1 Nibble: Rich 5-state consumer response ───────────────────
+            try {
+                const nibbleResult = await getPackState(batchId, packIndex);
+                const nibbleStatus = nibbleResult?.status; // MINTED | AT_SHOP | SOLD | REVOKED | NOT_INITIALIZED
+                const nibbleState  = nibbleResult?.state;  // 0–4
+
+                if (nibbleStatus === 'REVOKED' || nibbleStatus === 'RECALLED') {
+                    // State 4 or batch-level recall key hit
+                    uiState = UI_STATE.RECALLED;
+                    statusResult = { status: 'Recalled', liveOnChain: true };
+
+                } else if (nibbleStatus === 'SOLD' || nibbleState === 3) {
+                    // State 3: Dispensed to a patient — pack consumed
+                    uiState = UI_STATE.ALREADY_SOLD;
+                    statusResult = { status: 'Sold', liveOnChain: true };
+
+                } else if (nibbleStatus === 'AT_SHOP' || nibbleState === 2) {
+                    // State 2: Registered at a verified pharmacy — safe to buy!
+                    uiState = UI_STATE.AT_SHOP; // re-maps to GENUINE trust level
+                    statusResult = { status: 'AtShop', liveOnChain: true };
+
+                } else if (nibbleStatus === 'MINTED' || nibbleState === 1 || nibbleStatus === 'CREATED' || nibbleState === 0) {
+                    // State 1/0: Pack never reached any registered pharmacy
+                    // This means: still in transit, OR was stolen before pharmacy registration
+                    uiState = UI_STATE.SUPPLY_CHAIN_DIVERSION;
+                    statusResult = { status: 'SupplyChainDiversion', liveOnChain: true };
+
+                } else {
+                    // NOT_INITIALIZED or UNKNOWN — pack not found on ledger
+                    uiState = UI_STATE.GENUINE; // fallback: if ledger unreachable, trust crypto sig
+                    statusResult = { status: 'MINTED', liveOnChain: false };
+                }
+
+                // Map forensic custody attribution from blockchain
+                let custodyDetail = {};
+                if (nibbleResult?.saleCustody) {
+                    custodyDetail = {
+                        ...custodyDetail,
+                        sellerId:       nibbleResult.saleCustody.sellerId,
+                        soldByOperator: nibbleResult.saleCustody.soldByOperator,
+                        location:       nibbleResult.saleCustody.location,
+                        timestamp:      nibbleResult.saleCustody.sellTimestamp,
+                        txId:           nibbleResult.saleCustody.sellTxId,
+                        eventType:      'SOLD',
+                    };
+                }
+                if (nibbleResult?.intakeCustody) {
+                    custodyDetail = {
+                        ...custodyDetail,
+                        intakeShopId:     nibbleResult.intakeCustody.intakeShopId,
+                        intakeOperatorId: nibbleResult.intakeCustody.intakeOperatorId,
+                        intakeLocation:   nibbleResult.intakeCustody.location,
+                        intakeTime:       nibbleResult.intakeCustody.intakeTimestamp,
+                        intakeTxId:       nibbleResult.intakeCustody.intakeTxId,
+                    };
+                    if (!custodyDetail.sellerId) {
+                        custodyDetail.sellerId  = nibbleResult.intakeCustody.intakeShopId;
+                        custodyDetail.location  = nibbleResult.intakeCustody.location;
+                        custodyDetail.timestamp = nibbleResult.intakeCustody.intakeTimestamp;
+                        custodyDetail.eventType = 'INTAKE';
+                    }
+                }
+                statusResult.detail = custodyDetail;
+                statusResult.custody = {
+                    intake: nibbleResult?.intakeCustody || null,
+                    sale:   nibbleResult?.saleCustody || null,
+                };
+            } catch (err) {
+                console.warn(`[consumer-service Verify] ⚠️ V2.1 nibble state lookup error: ${err.message}`);
+            }
+        } else {
+            try {
+                statusResult = await getPackStatus(packHash, batchId);
+            } catch (err) {
+                console.warn(`[consumer-service Verify] ⚠️ Blockchain lookup error: ${err.message}`);
+            }
+            const rawStatus = statusResult.status || statusResult.custodyState || 'MINTED';
+            uiState = mapStatusToUiState(rawStatus);
+        }
 
         let blockchainStatus = statusResult.liveOnChain ? 'COMMITTED (ON-CHAIN)' : 'GENUINE (OFFLINE_VERIFIED)';
         if (uiState === UI_STATE.AT_SHOP) blockchainStatus = 'AT_SHOP';

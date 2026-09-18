@@ -17,6 +17,7 @@ import {
     updateBatchController,
     deleteBatchController,
     verifyBatchPackController,
+    shipBatchController,
 } from '../controllers/batch.controller.js';
 
 const router = express.Router();
@@ -73,6 +74,9 @@ router.post('/:batchId/mint', mintBatchController);
 
 // POST /api/manufacturer/batch/:batchId/retry-blockchain — retry blockchain commit for already minted batch
 router.post('/:batchId/retry-blockchain', retryBlockchainBatchController);
+
+// POST /api/manufacturer/batch/:batchId/ship — approve and ship batch (transitions CREATED → MINTED on Fabric)
+router.post('/:batchId/ship', shipBatchController);
 
 // POST /api/manufacturer/batch/:batchId/recall — initiate batch recall across supply chain
 router.post('/:batchId/recall', recallBatchController);

@@ -67,7 +67,7 @@ export const generateKeyForManufacturer = async (manufacturerId, authToken) => {
  *   timingMs:                { signing: number, upload: number, total: number }
  * }>}
  */
-export const mintBatchViaPharmaCore = async ({ batchId, manufacturerId, expiryDate, quantity, totalQuantity, medicineName, authToken }) => {
+export const mintBatchViaPharmaCore = async ({ batchId, manufacturerId, expiryDate, quantity, totalQuantity, medicineName, authToken, version = 'v2' }) => {
     const finalQty = quantity != null ? quantity : totalQuantity;
     try {
         const response = await getCoreClient(authToken).post('/core/batch/mint', {
@@ -76,10 +76,11 @@ export const mintBatchViaPharmaCore = async ({ batchId, manufacturerId, expiryDa
             expiryDate,
             quantity: finalQty,
             medicineName: medicineName || '',   // Used for CSV metadata in pharma-core
+            version,
         });
         console.log(
             `[manufacturer-service CoreClient] pharma-core S3 mint complete for ${batchId}` +
-            ` — ${response.data.totalPacks} packs | mode: ${response.data.s3Mode}`,
+            ` — ${response.data.totalPacks} packs | mode: ${response.data.s3Mode} | version: ${version}`,
         );
         return response.data;
     } catch (err) {
@@ -227,6 +228,16 @@ export const getPackStatusViaPharmaCore = async ({ packHash, batchId, authToken 
             timeout: 15_000,
         },
     );
+    return response.data;
+};
+
+/**
+ * Bulk transitions all packs in a batch from CREATED to MINTED on Fabric via pharma-core.
+ * @param {Object} params - { batchId, authToken }
+ * @returns {Promise<Object>}
+ */
+export const mintBatchOnChainViaPharmaCore = async ({ batchId, authToken }) => {
+    const response = await getCoreClient(authToken).post('/core/chain/mint-batch', { batchId });
     return response.data;
 };
 

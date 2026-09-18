@@ -136,4 +136,105 @@ public class TransitionController {
         byte[] result = getContract().evaluateTransaction("queryTransition", fromId, toId, hash);
         return new String(result);
     }
+
+    @PostMapping("/init-scanmap")
+    public String initBatchScanMap(@RequestBody ScanMapInitRequest req) throws Exception {
+        log.info("🗺️ [BLOCKCHAIN-GATEWAY] Initializing Fabric NibbleMap (V2.1): batchId='{}', totalPacks={}",
+                req.batchId, req.totalPacks);
+        byte[] result = getContract().submitTransaction(
+            "initBatchScanMap",
+            req.batchId,
+            String.valueOf(req.totalPacks)
+        );
+        String resStr = new String(result);
+        log.info("✅ [BLOCKCHAIN-GATEWAY] NibbleMap initialized on blockchain for batchId='{}': {}", req.batchId, resStr);
+        return resStr;
+    }
+
+    /**
+     * V2.1: Set a pack's supply-chain nibble state with forensic custody attribution.
+     * newState ∈ { "AT_SHOP", "SOLD", "REVOKED" }
+     * Enforces the state machine: MINTED → AT_SHOP → SOLD; ANY → REVOKED.
+     * Records shopId/sellerId, operatorId, and consensus timestamp on ledger.
+     */
+    @PostMapping("/set-pack-state")
+    public String setPackState(@RequestBody ScanPackRequest req) throws Exception {
+        String newState = req.newState != null ? req.newState.toUpperCase() : "SOLD";
+        String actorId = req.shopId != null ? req.shopId : (req.sellerId != null ? req.sellerId : "");
+        String operatorId = req.operatorId != null ? req.operatorId : "";
+        String location = req.location != null ? req.location : "";
+
+        log.info("⚡ [BLOCKCHAIN-GATEWAY] V2.1 setPackState: batchId='{}', packIndex={}, newState={}, actorId='{}', operatorId='{}'",
+                req.batchId, req.packIndex, newState, actorId, operatorId);
+        byte[] result = getContract().submitTransaction(
+            "setPackState",
+            req.batchId,
+            String.valueOf(req.packIndex),
+            newState,
+            actorId,
+            operatorId,
+            location
+        );
+        String resStr = new String(result);
+        log.info("✅ [BLOCKCHAIN-GATEWAY] setPackState result for batchId='{}', packIndex={}: {}",
+                req.batchId, req.packIndex, resStr);
+        return resStr;
+    }
+
+    /**
+     * V2.1: Bulk transition all packs in a batch from CREATED (0x0) to MINTED (0x1)
+     * when the manufacturer approves and ships the batch.
+     */
+    @PostMapping("/mint-batch")
+    public String mintBatch(@RequestBody java.util.Map<String, Object> req) throws Exception {
+        String batchId = (String) req.get("batchId");
+        log.info("⚡ [BLOCKCHAIN-GATEWAY] V2.1 mintBatch (CREATED → MINTED): batchId='{}'", batchId);
+        byte[] result = getContract().submitTransaction("mintBatch", batchId);
+        String resStr = new String(result);
+        log.info("✅ [BLOCKCHAIN-GATEWAY] mintBatch result for batchId='{}': {}", batchId, resStr);
+        return resStr;
+    }
+
+    /**
+     * V2.1: Read-only nibble state query.
+     * Returns full state JSON: { status, state (0–4), packIndex, batchId }
+     */
+    @GetMapping("/pack-state")
+    public String getPackState(@RequestParam String batchId, @RequestParam int packIndex) throws Exception {
+        log.info("🔍 [BLOCKCHAIN-GATEWAY] V2.1 getPackState (read-only): batchId='{}', packIndex={}",
+                batchId, packIndex);
+        byte[] result = getContract().evaluateTransaction(
+            "getPackState",
+            batchId,
+            String.valueOf(packIndex)
+        );
+        return new String(result);
+    }
+
+    /** Backward-compatible alias: scan-pack delegates to setPackState with newState=SOLD */
+    @PostMapping("/scan-pack")
+    public String scanPack(@RequestBody ScanPackRequest req) throws Exception {
+        req.newState = "SOLD";
+        log.info("⚡ [BLOCKCHAIN-GATEWAY] (compat) scan-pack → setPackState SOLD: batchId='{}', packIndex={}",
+                req.batchId, req.packIndex);
+        String result = setPackState(req);
+        // Wrap in legacy envelope for old callers
+        if (result.contains("\"status\":\"OK\"")) {
+            return "{\"status\":\"OK\",\"batchId\":\"" + req.batchId + "\",\"packIndex\":" + req.packIndex + "}";
+        }
+        return result;
+    }
+
+    /** Backward-compatible alias: pack-bit delegates to getPackState */
+    @GetMapping("/pack-bit")
+    public String checkPackBit(@RequestParam String batchId, @RequestParam int packIndex) throws Exception {
+        log.info("🔍 [BLOCKCHAIN-GATEWAY] (compat) pack-bit → getPackState: batchId='{}', packIndex={}",
+                batchId, packIndex);
+        byte[] result = getContract().evaluateTransaction(
+            "checkPackBit",
+            batchId,
+            String.valueOf(packIndex)
+        );
+        return new String(result);
+    }
 }

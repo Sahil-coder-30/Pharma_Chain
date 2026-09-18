@@ -5,15 +5,16 @@ import Incident from '../models/incident.model.js';
 import { getAllRecalls } from '../services/manufacturerClient.service.js';
 import { getISTISOString, getISTDateString, formatISTDateTime } from '../utils/time.js';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Constants ───────────────────────────────────────────────────────────────────
 const LOW_STOCK_THRESHOLD  = 10;
 const EXPIRY_ALERT_DAYS    = 30;
+const EXPIRY_ALERT_MS      = EXPIRY_ALERT_DAYS * 24 * 60 * 60 * 1000;
 
 // ── 4.1 Dashboard Stats ───────────────────────────────────────────────────────
 export const statsController = async (req, res) => {
     try {
         const shopkeeperId = req.user.id;
-        const thirtyDaysFromNow = new Date(Date.now() + EXPIRY_ALERT_DAYS * 24 * 60 * 60 * 1000);
+        const thirtyDaysFromNow = new Date(Date.now() + EXPIRY_ALERT_MS);
 
         const [
             totalScans,
@@ -88,11 +89,8 @@ export const historyController = async (req, res) => {
 
             return {
                 id:           e._id.toString(),
-                name:         e.medicineName || 'Medicine Pack',
                 medicineName: e.medicineName || 'Medicine Pack',
-                batch:        e.batchNo || e.batchId || 'N/A',
                 batchNo:      e.batchNo || e.batchId || 'N/A',
-                batchNumber:  e.batchNo || e.batchId || 'N/A',
                 packId:       e.packId || e.packHash || null,
                 timestamp:    e.createdAt,
                 time:         timeStr,
@@ -133,7 +131,7 @@ export const inventoryController = async (req, res) => {
         const items = await Inventory.find(filter).sort({ expiryDate: 1 }).lean();
 
         const now = new Date();
-        const thirtyDaysFromNow = new Date(Date.now() + EXPIRY_ALERT_DAYS * 24 * 60 * 60 * 1000);
+        const thirtyDaysFromNow = new Date(Date.now() + EXPIRY_ALERT_MS);
 
         const inventory = items.map((item) => {
             const exp = item.expiryDate ? new Date(item.expiryDate) : null;

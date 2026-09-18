@@ -1,16 +1,22 @@
 // ── requireVerified middleware — shopkeeper-service ───────────────────────────
 // Guards sensitive operations so only fully-verified shopkeepers can proceed.
-// Must be used AFTER identifyUser (which attaches req.user).
+// Must be used AFTER identifyUser (which attaches req.user and req.shopkeeper).
+//
+// NOTE: identifyUser already fetches the shopkeeper from DB (or Redis cache) and
+// attaches it as req.shopkeeper. This middleware reads that — no extra DB call.
 
 import Shopkeeper from '../models/shopkeeper.model.js';
 
 /**
  * Blocks access to sensitive routes if the shopkeeper's verificationStatus
- * is not 'verified'. Returns 403 Forbidden with a descriptive status & code.
+ * is not 'verified' or 'approved'. Returns 403 Forbidden with a descriptive code.
  */
 export const requireVerified = async (req, res, next) => {
     try {
-        const shopkeeper = await Shopkeeper.findOne({ shopId: req.user.id }).lean();
+        // Use the shopkeeper already loaded by identifyUser to avoid a second DB query.
+        // Fall back to a fresh DB lookup only if somehow not attached.
+        const shopkeeper = req.shopkeeper
+            ?? await Shopkeeper.findOne({ shopId: req.user.id }).lean();
 
         if (!shopkeeper) {
             return res.status(401).json({
@@ -26,7 +32,6 @@ export const requireVerified = async (req, res, next) => {
             req.shopkeeper = shopkeeper;
             return next();
         }
-
 
         if (status === 'pending') {
             return res.status(403).json({
@@ -67,3 +72,4 @@ export const requireVerified = async (req, res, next) => {
         });
     }
 };
+
